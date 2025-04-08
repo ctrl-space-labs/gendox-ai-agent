@@ -1,0 +1,777 @@
+<?php
+
+// Exit if accessed directly.
+if (! defined('ABSPATH')) exit;
+
+/**
+ * Class Gendox_Ai_Chat_For_Wordpress_Settings
+ *
+ * This class contains all of the plugin settings.
+ * Here you can configure the whole plugin data.
+ *
+ * @package		GENDOX
+ * @subpackage	Classes/Gendox_Ai_Chat_For_Wordpress_Settings
+ * @author		Ctrl+Space Labs
+ * @since		1.0.0
+ */
+class Gendox_Ai_Chat_For_Wordpress_Settings
+{
+
+	/**
+	 * The plugin name
+	 *
+	 * @var		string
+	 * @since   1.0.0
+	 */
+	private $plugin_name;
+
+	/**
+	 * Our Gendox_Ai_Chat_For_Wordpress_Settings constructor 
+	 * to run the plugin logic.
+	 *
+	 * @since 1.0.0
+	 */
+	function __construct()
+	{
+		$this->plugin_name = GENDOX_NAME;
+
+		add_action('admin_menu', array($this, 'add_settings_page'));
+		add_action('admin_init', array($this, 'register_settings'));
+		add_action('wp_ajax_gendox_test_connection', array($this, 'gendox_test_connection'));
+		add_action('wp_ajax_gendox_fetch_projects', array($this, 'gendox_fetch_projects'));
+		add_action('wp_ajax_gendox_save_project_changes', array($this, 'gendox_save_project_changes'));
+		add_action('wp_ajax_gendox_fetch_posts', array($this, 'gendox_fetch_posts'));
+		add_action('wp_ajax_gendox_fetch_products', array($this, 'gendox_fetch_products'));
+		add_action('wp_ajax_gendox_fetch_pages', array($this, 'gendox_fetch_pages'));
+		add_action('wp_ajax_gendox_get_project_items', array($this, 'gendox_get_project_items'));
+		add_action('wp_ajax_gendox_view_project', array($this, 'gendox_view_project'));
+		add_action('wp_ajax_gendox_save_chat_settings', array($this, 'gendox_save_chat_settings'));
+		add_action('wp_ajax_gendox_get_chat_settings', array($this, 'gendox_get_chat_settings'));
+		add_action('admin_menu', array($this, 'add_hidden_settings_page'));
+		add_action('admin_init', array($this, 'register_hidden_setting'));
+	}
+
+	/**
+	 * Add the settings page to the WordPress admin menu
+	 *
+	 * @since 1.0.0
+	 */
+	public function add_settings_page()
+	{
+		add_options_page(
+			__('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
+			__('Gendox AI Chat', 'gendox-ai-chat-for-wordpress'),
+			'edit_posts',
+			'gendox-ai-chat-settings',
+			array($this, 'settings_page_content')
+		);
+	}
+
+	public function add_hidden_settings_page()
+	{
+		add_submenu_page(
+			null,
+			'Chat Script Settings',
+			'Chat Script Settings',
+			'manage_options',
+			'chat-script-settings',
+			array($this, 'render_settings_page')
+		);
+	}
+
+	public function render_settings_page()
+	{
+		// Check if user is allowed to access the page
+		if (!current_user_can('manage_options')) {
+			return;
+		}
+
+		// Output the page content
+?>
+		<div class="wrap">
+			<h1><?php _e('Chat Script Settings', 'gendox-ai-chat-for-wordpress'); ?></h1>
+			<form method="post" action="options.php">
+				<?php
+				// Define and retrieve the option
+				settings_fields('chat_script_settings_group');
+				do_settings_sections('chat-script-settings');
+				submit_button();
+				?>
+			</form>
+		</div>
+	<?php
+	}
+
+	public function register_hidden_setting()
+	{
+		register_setting('chat_script_settings_group', 'chat_script_url');
+		add_settings_section(
+			'chat_script_main_section',
+			__('Chat Script Settings', 'gendox-ai-chat-for-wordpress'),
+			null,
+			'chat-script-settings'
+		);
+		add_settings_field(
+			'chat_script_url',
+			__('Chat Script URL', 'gendox-ai-chat-for-wordpress'),
+			array($this, 'chat_script_url_field_callback'),
+			'chat-script-settings',
+			'chat_script_main_section'
+		);
+	}
+
+
+	public function chat_script_url_field_callback()
+	{
+		$chat_script_url = get_option('gendox_chat_script_url', 'https://dev.gendox.ctrlspace.dev');
+		echo '<input type="text" class="form-control" name="gendox_chat_script_url" value="' . esc_attr($chat_script_url) . '" />';
+	}
+
+	/**
+	 * Register settings and fields
+	 *
+	 * @since 1.0.0
+	 */
+	public function register_settings()
+	{
+		// AI Chat Settings section
+		register_setting('gendox_ai_chat_settings_group', 'gendox_ai_chat_api_key');
+		add_settings_section(
+			'gendox_ai_chat_main_section',
+			__('AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
+			null,
+			'gendox-ai-chat-settings'
+		);
+		add_settings_field(
+			'gendox_ai_chat_api_key',
+			__('API Key', 'gendox-ai-chat-for-wordpress'),
+			array($this, 'api_key_field_callback'),
+			'gendox-ai-chat-settings',
+			'gendox_ai_chat_main_section'
+		);
+
+		// WordPress Settings section
+		register_setting('gendox_wp_settings_group', 'gendox_wp_setting_example');
+		add_settings_section(
+			'gendox_wp_main_section',
+			__('WordPress Settings', 'gendox-ai-chat-for-wordpress'),
+			null,
+			'gendox-ai-chat-wp-settings'
+		);
+
+		add_settings_section(
+			'gendox_projects_section',
+			'',
+			array($this, 'gendox_projects_section'),
+			'gendox-ai-chat-wp-settings'
+		);
+	}
+
+	public function chat_script_settings_page_content()
+	{
+	?>
+		<div class="wrap">
+			<h1><?php echo esc_html(__('Gendox Chat Script Settings', 'gendox-ai-chat-for-wordpress')); ?></h1>
+			<form method="post" action="options.php">
+				<?php
+				settings_fields('gendox_chat_script_settings_group');
+				do_settings_sections('gendox-chat-script-settings');
+				submit_button();
+				?>
+			</form>
+		</div>
+	<?php
+	}
+
+	/**
+	 * Callback function for the API key field (AI Chat Settings)
+	 *
+	 * @since 1.0.0
+	 */
+	public function api_key_field_callback()
+	{
+		$api_key = get_option('gendox_ai_chat_api_key');
+		echo '<div id="gendox_api_key_container">';
+		echo '<div class="input-group mb-3">';
+		echo '<input type="text" class="form-control" id="gendox_api_key" name="gendox_ai_chat_api_key" value="' . esc_attr($api_key) . '" />';
+		echo '<div class="input-group-append">';
+		echo '<button type="button" id="test_connection_button" class="btn btn-outline-secondary">Test Connection</button>';
+		echo '</div>';
+		echo '</div>';
+		echo '<span id="connection_status"></span>';
+		echo '</div>';
+	}
+
+	/**
+	 * The content of the settings page with tabs
+	 *
+	 * @since 1.0.0
+	 */
+	public function settings_page_content()
+	{
+		$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'ai-chat-settings';
+	?>
+		<div class="wrap">
+			<h1><?php echo esc_html(__('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress')); ?></h1>
+
+			<!-- Tabs Navigation -->
+			<ul class="nav nav-tabs" id="gendoxSettingsTabs" role="tablist">
+				<li class="nav-item">
+					<a class="nav-link <?php echo ($active_tab == 'ai-chat-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=ai-chat-settings"><?php _e('AI Chat Settings', 'gendox-ai-chat-for-wordpress'); ?></a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link <?php echo ($active_tab == 'wp-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=wp-settings"><?php _e('WordPress Settings', 'gendox-ai-chat-for-wordpress'); ?></a>
+				</li>
+			</ul>
+
+			<!-- Tab Content -->
+			<div class="tab-content" id="gendoxSettingsTabContent">
+				<div class="tab-pane fade <?php echo ($active_tab == 'ai-chat-settings') ? 'show active' : ''; ?>" id="ai-chat-settings">
+					<form method="post" action="options.php">
+						<?php
+						settings_fields('gendox_ai_chat_settings_group');
+						do_settings_sections('gendox-ai-chat-settings');
+						submit_button();
+						?>
+					</form>
+
+					<!-- Responsive Iframe Container -->
+					<div style="position: relative; padding-top: 56.25%; margin-top: 20px;"> <!-- 16:9 Aspect Ratio -->
+						<iframe src="https://dev.gendox.ctrlspace.dev/login-prompt" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allowfullscreen></iframe>
+					</div>
+				</div>
+
+				<div class="tab-pane fade <?php echo ($active_tab == 'wp-settings') ? 'show active' : ''; ?>" id="wp-settings">
+					<form method="post" action="options.php">
+						<?php
+						settings_fields('gendox_wp_settings_group');
+						do_settings_sections('gendox-ai-chat-wp-settings');
+						?>
+					</form>
+				</div>
+
+
+			</div>
+		</div>
+	<?php
+	}
+
+	public function gendox_projects_section()
+	{
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'gendox_projects';
+		$projects = $wpdb->get_results("SELECT * FROM $table_name");
+
+		echo '<h3>' . __('Gendox Projects', 'gendox-ai-chat-for-wordpress') . '</h3>';
+	?>
+		<div id="gendox_projects_container">
+			<table id="projects_table" class="table table-hover table-light">
+				<thead class="thead-light">
+					<tr>
+						<th><?php _e('ID', 'gendox-ai-chat-for-wordpress'); ?></th>
+						<th><?php _e('Project Name', 'gendox-ai-chat-for-wordpress'); ?></th>
+						<th><?php _e('Description', 'gendox-ai-chat-for-wordpress'); ?></th>
+						<th><?php _e('Actions', 'gendox-ai-chat-for-wordpress'); ?></th>
+					</tr>
+				</thead>
+				<tbody id="projects_list">
+					<?php if (!empty($projects)): ?>
+						<?php foreach ($projects as $project): ?>
+							<tr>
+								<td><?php echo esc_html($project->gendoxId); ?></td>
+								<td><?php echo esc_html($project->name); ?></td>
+								<td><?php echo esc_html($project->description) ?: 'No description'; ?></td>
+								<td>
+									<a href="#" class="btn btn-sm btn-warning edit-project" title="Edit"><i class="fas fa-pencil-alt"></i> Assign Content</a>
+									<a href="#" class="btn btn-sm btn-success assign-chat" title="Assign Chat" data-project-id="<?php echo esc_attr($project->gendoxId); ?>"><i class="fas fa-eye"></i> Assign Chat</a>
+									<a href="#" class="btn btn-sm btn-info view-project" title="View"><i class="fas fa-eye"></i> View</a>
+									<a href="#" class="btn btn-sm btn-danger delete-project" title="Delete"><i class="fas fa-trash"></i> Delete</a>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					<?php else: ?>
+						<tr>
+							<td colspan="4"><?php _e('No projects found.', 'gendox-ai-chat-for-wordpress'); ?></td>
+						</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+			<button type="button" id="fetch_projects_button" class="btn btn-primary">Fetch Projects</button>
+		</div>
+		<div id="editProjectModal" style="display:none;">
+			<!-- close modal -->
+			<span id="closeModal">&times;</span>
+			<h2>Assign Content</h2>
+			<form id="editProjectForm">
+				<input type="hidden" id="projectId" name="projectId" value="">
+
+				<label for="postList">Assign Posts:</label>
+				<div id="postList" class="gendoxItemsSelect">
+					<select id="assign_posts" name="post[]" multiple="multiple" class="select2-multi" style="width: 100%;"></select>
+				</div>
+
+				<label for="productList">Assign Products:</label>
+				<div id="productList" class="gendoxItemsSelect">
+					<select id="assign_products" name="product[]" multiple="multiple" class="select2-multi" style="width: 100%;"></select>
+				</div>
+
+				<label for="pageList">Assign Pages:</label>
+				<div id="pageList" class="gendoxItemsSelect">
+					<select id="assign_pages" name="page[]" multiple="multiple" class="select2-multi" style="width: 100%;"></select>
+				</div>
+
+				<button type="button" id="saveProjectChanges">Save Changes</button>
+			</form>
+		</div>
+		<!-- Add this modal to your existing HTML -->
+		<div id="viewProjectModal" style="display:none;">
+			<span id="closeViewModal">&times;</span> <!-- Close button -->
+			<h2>View Project</h2>
+			<div id="projectDetails">
+				<p><strong><?php _e('Project ID:', 'gendox-ai-chat-for-wordpress'); ?></strong> <span id="view_projectId"></span></p>
+				<p><strong><?php _e('Project Name:', 'gendox-ai-chat-for-wordpress'); ?></strong> <span id="view_projectName"></span></p>
+				<p><strong><?php _e('Project Description:', 'gendox-ai-chat-for-wordpress'); ?></strong> <span id="view_projectDescription"></span></p>
+				<div class="gendoxAssignedItemsType">
+					<span><strong><?php _e('Assigned Posts:', 'gendox-ai-chat-for-wordpress'); ?></strong></span>
+					<div id="view_assignedPosts" class="gendoxAssignedItems"></div>
+				</div>
+				<div class="gendoxAssignedItemsType">
+					<span><strong><?php _e('Assigned Products:', 'gendox-ai-chat-for-wordpress'); ?></strong></span>
+					<div id="view_assignedProducts" class="gendoxAssignedItems"></div>
+				</div>
+				<div class="gendoxAssignedItemsType">
+					<span><strong><?php _e('Assigned Pages:', 'gendox-ai-chat-for-wordpress'); ?></strong></span>
+					<div id="view_assignedPages" class="gendoxAssignedItems"></div>
+				</div>
+			</div>
+		</div>
+
+		<div id="assignChatModal" style="display:none;">
+			<span id="closeChatModal">&times;</span> <!-- Close button -->
+			<h2>Assign Chat</h2>
+			<form>
+				<input type="hidden" id="projectId" name="project_id" value="">
+
+				<label for="postTypeSelect">Post Type:</label>
+				<select id="postTypeSelect" multiple>
+					<!-- get all post types dynamically -->
+					<?php
+					$post_types = get_post_types(array('public' => true), 'objects');
+					foreach ($post_types as $post_type) {
+						echo '<option value="' . esc_attr($post_type->name) . '">' . esc_html($post_type->label) . '</option>';
+					}
+					?>
+				</select>
+
+				<label for="taxonomySelect">Taxonomies:</label>
+				<?php
+				// Fetch all public taxonomies except WooCommerce attributes (starting with "pa_")
+				$taxonomies = get_taxonomies(array('public' => true), 'objects');
+
+				foreach ($taxonomies as $taxonomy) {
+					if (strpos($taxonomy->name, 'pa_') === 0) {
+						// Skip WooCommerce attributes
+						continue;
+					}
+
+					// Fetch terms for each taxonomy
+					$terms = get_terms(array(
+						'taxonomy' => $taxonomy->name,
+						'hide_empty' => false,
+					));
+
+					// Check if there are any terms to display
+					if (!is_wp_error($terms) && !empty($terms)) {
+						// Display the label and select only if there are terms
+						echo '<label for="taxonomy_' . esc_attr($taxonomy->name) . '">' . esc_html($taxonomy->label) . ':</label>';
+						echo '<select id="taxonomy_' . esc_attr($taxonomy->name) . '" name="taxonomies[' . esc_attr($taxonomy->name) . '][]" multiple>';
+
+						// Populate the select with terms
+						foreach ($terms as $term) {
+							echo '<option value="' . esc_attr($term->term_id) . '">' . esc_html($term->name) . '</option>';
+						}
+
+						echo '</select><br>';
+					}
+				}
+				?>
+
+
+				<button type="button" id="saveChatSettings">Save Changes</button>
+			</form>
+		</div>
+
+
+<?php
+	}
+
+
+	public function gendox_test_connection()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$api_key = isset($_POST['api_key']) ? sanitize_text_field($_POST['api_key']) : '';
+
+		if (empty($api_key)) {
+			wp_send_json_error('API Key is missing');
+		}
+
+		[$http_code, $body] = $this->gendox_get_api_call($api_key);
+
+		if ($http_code === 200) {
+			$response_data = json_decode($body, true); // Decode the response body into an associative array
+			$userName = $response_data['userName']; // Get the username from the response
+
+			if (!empty($userName)) {
+				wp_send_json_success(array('status' => 200, 'username' => $userName));
+			} else {
+				wp_send_json_success(array('status' => 200, 'username' => 'null'));
+			}
+		} else {
+			wp_send_json_success(array('status' => $http_code, 'message' => 'Failed to retrieve data'));
+		}
+	}
+
+	public function gendox_fetch_projects()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$api_key = get_option('gendox_ai_chat_api_key');
+		if (empty($api_key)) {
+			wp_send_json_error('API Key is missing.');
+		}
+
+		[$http_code, $body] = $this->gendox_get_api_call($api_key);
+
+		if ($http_code === 200) {
+			$response_data = json_decode($body, true);
+
+			if (!empty($response_data['organizations'])) {
+				global $wpdb;
+				$table_name = $wpdb->prefix . 'gendox_projects';
+
+				$api_project_ids = []; // Array to hold project IDs from API
+
+				foreach ($response_data['organizations'] as $organization) {
+					$organizationId = sanitize_text_field($organization['id']);
+
+					if (!empty($organization['projects'])) {
+						foreach ($organization['projects'] as $project) {
+							$projectId = sanitize_text_field($project['id']);
+							$projectName = sanitize_text_field($project['name']);
+							$projectDescription = sanitize_textarea_field($project['description']);
+							$api_project_ids[] = $projectId; // Track this project ID from the API response
+
+							// Check if project already exists in the database
+							$existing_project = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table_name WHERE gendoxId = %s", $projectId));
+
+							if ($existing_project) {
+								// Update existing project
+								$wpdb->update(
+									$table_name,
+									[
+										'organizationId' => $organizationId,
+										'name' => $projectName,
+										'description' => $projectDescription,
+									],
+									['gendoxId' => $projectId],
+									['%s', '%s', '%s'],
+									['%s']
+								);
+							} else {
+								// Insert new project
+								$wpdb->insert(
+									$table_name,
+									[
+										'gendoxId' => $projectId,
+										'organizationId' => $organizationId,
+										'name' => $projectName,
+										'description' => $projectDescription,
+										'postIds' => ''
+									],
+									['%s', '%s', '%s', '%s', '%s']
+								);
+							}
+						}
+					}
+				}
+
+				// Delete projects from the database that no longer exist in the API response
+				$api_project_ids_placeholder = implode(', ', array_fill(0, count($api_project_ids), '%s'));
+				$wpdb->query(
+					$wpdb->prepare(
+						"DELETE FROM $table_name WHERE gendoxId NOT IN ($api_project_ids_placeholder)",
+						...$api_project_ids
+					)
+				);
+
+				// Fetch and return the updated projects from the database
+				$projects = $wpdb->get_results("SELECT * FROM $table_name");
+
+				if (!empty($projects)) {
+					$project_data = [];
+					foreach ($projects as $project) {
+						$project_data[] = [
+							'id' => $project->id,
+							'gendox_id' => $project->gendoxId,
+							'name' => $project->name,
+							'description' => $project->description,
+							'actions' => ''
+						];
+					}
+
+					wp_send_json_success($project_data);
+				} else {
+					wp_send_json_error('No projects found after saving.');
+				}
+			} else {
+				wp_send_json_error('No organizations or projects found in API response.');
+			}
+		} else {
+			wp_send_json_error('Failed to fetch projects from API.');
+		}
+	}
+
+	public function gendox_get_api_call($api_key)
+	{
+		$curl = curl_init();
+
+		curl_setopt_array($curl, array(
+			CURLOPT_URL => 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/profile',
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'GET',
+			CURLOPT_HTTPHEADER => array(
+				'x-api-key: ' . $api_key
+			),
+			CURLOPT_HEADER => true
+		));
+
+		$response = curl_exec($curl);
+		$http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+		$header_size = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
+
+		$body = substr($response, $header_size);
+
+		curl_close($curl);
+		return [$http_code, $body];
+	}
+
+	// Fetch Posts
+	public function gendox_fetch_posts()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$posts = get_posts(array(
+			'post_type' => 'post',
+			'numberposts' => -1,
+		));
+
+		if (!empty($posts)) {
+			$output = array();
+			foreach ($posts as $post) {
+				$output[] = array(
+					'id' => $post->ID,
+					'title' => $post->post_title
+				);
+			}
+			wp_send_json_success($output);
+		} else {
+			wp_send_json_error('No posts found.');
+		}
+	}
+
+	// Fetch Products
+	public function gendox_fetch_products()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$products = get_posts(array(
+			'post_type' => 'product',
+			'numberposts' => -1,
+		));
+
+		if (!empty($products)) {
+			$output = array();
+			foreach ($products as $product) {
+				$output[] = array(
+					'id' => $product->ID,
+					'title' => $product->post_title
+				);
+			}
+			wp_send_json_success($output);
+		} else {
+			wp_send_json_error('No products found.');
+		}
+	}
+
+	// Fetch Pages
+	public function gendox_fetch_pages()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$pages = get_posts(array(
+			'post_type' => 'page',
+			'numberposts' => -1,
+		));
+
+		if (!empty($pages)) {
+			$output = array();
+			foreach ($pages as $page) {
+				$output[] = array(
+					'id' => $page->ID,
+					'title' => $page->post_title
+				);
+			}
+			wp_send_json_success($output);
+		} else {
+			wp_send_json_error('No pages found.');
+		}
+	}
+
+	public function gendox_save_project_changes()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$projectId = isset($_POST['projectId']) ? sanitize_text_field($_POST['projectId']) : '';
+		$assignedPosts = isset($_POST['posts']) ? array_map('intval', $_POST['posts']) : array();
+		$assignedProducts = isset($_POST['products']) ? array_map('intval', $_POST['products']) : array();
+		$assignedPages = isset($_POST['pages']) ? array_map('intval', $_POST['pages']) : array();
+
+		if (empty($projectId)) {
+			wp_send_json_error('Project ID is missing.');
+		}
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'gendox_projects';
+
+		// Save assigned posts/products/pages in a serialized format
+		$assignedItems = serialize(array(
+			'posts' => $assignedPosts,
+			'products' => $assignedProducts,
+			'pages' => $assignedPages
+		));
+
+		$wpdb->update(
+			$table_name,
+			array('postIds' => $assignedItems),
+			array('gendoxId' => $projectId),
+			array('%s'),
+			array('%s')
+		);
+
+		wp_send_json_success('Project updated successfully.');
+	}
+
+
+	public function gendox_get_project_items()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$projectId = isset($_POST['projectId']) ? sanitize_text_field($_POST['projectId']) : '';
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'gendox_projects';
+		$project = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE gendoxId = %s", $projectId));
+
+		if ($project) {
+			$assignedItems = maybe_unserialize($project->postIds);
+			wp_send_json_success($assignedItems);
+		} else {
+			wp_send_json_error('No project found.');
+		}
+	}
+
+	public function gendox_view_project()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$projectId = isset($_POST['projectId']) ? sanitize_text_field($_POST['projectId']) : '';
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'gendox_projects';
+		$project = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE gendoxId = %s", $projectId));
+
+		if ($project) {
+			$assignedItems = maybe_unserialize($project->postIds);
+
+			// Fetch names of assigned posts, products, and pages
+			$post_titles = $this->get_titles_by_ids($assignedItems['posts'], 'post');
+			$product_titles = $this->get_titles_by_ids($assignedItems['products'], 'product');
+			$page_titles = $this->get_titles_by_ids($assignedItems['pages'], 'page');
+
+			// Return detailed project data
+			wp_send_json_success(array(
+				'name' => $project->name,
+				'description' => $project->description,
+				'posts' => $post_titles,
+				'products' => $product_titles,
+				'pages' => $page_titles,
+			));
+		} else {
+			wp_send_json_error('No project found.');
+		}
+	}
+
+	// Helper function to fetch titles by IDs
+	private function get_titles_by_ids($ids, $post_type)
+	{
+		if (!empty($ids)) {
+			$posts = get_posts(array(
+				'post_type' => $post_type,
+				'post__in' => $ids,
+				'numberposts' => -1
+			));
+			return wp_list_pluck($posts, 'post_title'); // Return titles of the items
+		}
+		return array();
+	}
+
+	// Save chat settings
+	public function gendox_save_chat_settings()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		// Retrieve selected values from the AJAX request
+		$post_type = isset($_POST['post_type']) ? (array) $_POST['post_type'] : [];
+		$taxonomies = isset($_POST['taxonomies']) ? (array) $_POST['taxonomies'] : [];
+		$project_id = isset($_POST['project_id']) ? sanitize_text_field($_POST['project_id']) : '';
+
+		if (empty($project_id)) {
+			wp_send_json_error(__('Project ID is missing.', 'gendox-ai-chat-for-wordpress'));
+		}
+
+		// Save data as an option with the project ID
+		update_option("gendox_ai_chat_positions_{$project_id}", [
+			'post_type' => $post_type,
+			'taxonomies' => $taxonomies,
+		]);
+
+		wp_send_json_success(__('Chat settings saved successfully.', 'gendox-ai-chat-for-wordpress'));
+	}
+
+	// Get chat settings for a project
+	public function gendox_get_chat_settings()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$project_id = isset($_POST['project_id']) ? sanitize_text_field($_POST['project_id']) : '';
+
+		if (empty($project_id)) {
+			wp_send_json_error(__('Project ID is missing.', 'gendox-ai-chat-for-wordpress'));
+		}
+
+		// Retrieve the saved settings for the project
+		$settings = get_option("gendox_ai_chat_positions_{$project_id}", [
+			'post_type' => [],
+			'taxonomies' => []
+		]);
+
+		wp_send_json_success($settings);
+	}
+}

@@ -1,0 +1,120 @@
+<?php
+
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+/**
+ * Class Gendox_Ai_Chat_For_Wordpress_Helpers
+ *
+ * This class contains repetitive functions that
+ * are used globally within the plugin.
+ *
+ * @package		GENDOX
+ * @subpackage	Classes/Gendox_Ai_Chat_For_Wordpress_Helpers
+ * @author		Ctrl+Space Labs
+ * @since		1.0.0
+ */
+class Gendox_Ai_Chat_For_Wordpress_Helpers {
+
+	/**
+     * Updates the integration status via API.
+     * 
+     * @param string $status 'ACTIVE' or 'INACTIVE'
+     * @return void
+     */
+	public static function update_integration_status($status) {
+		$api_key = get_option('gendox_ai_chat_api_key'); // Replace with your option key
+		if (!$api_key) {
+			error_log('Gendox API Key is missing.');
+			return;
+		}
+
+		$domain = site_url();
+		$context_path = '/wp-json/gendox/v1';
+
+		$organization_id = self::get_organization_id($api_key);
+		if (!$organization_id) {
+			error_log('Failed to retrieve organization ID.');
+			return;
+		}
+
+		$url = "https://dev.gendox.ctrlspace.dev/gendox/api/v1/organizations/$organization_id/websites/integration";
+
+		$body = json_encode([
+			'domain' => $domain,
+			'contextPath' => $context_path,
+			'apiKey' => ['apiKey' => $api_key],
+			'integrationType' => ['name' => 'API_INTEGRATION'],
+			'integrationStatus' => ['name' => $status],
+		]);
+
+		$curl = curl_init();
+
+		curl_setopt_array($curl, [
+			CURLOPT_URL => $url,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 15,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_POSTFIELDS => $body,
+			CURLOPT_HTTPHEADER => [
+				'Content-Type: application/json',
+				'x-api-key: ' . $api_key,
+			],
+			CURLOPT_SSL_VERIFYHOST => true,
+			CURLOPT_SSL_VERIFYPEER => true,
+			CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2, // Enforce modern TLS
+		]);
+
+		$response = curl_exec($curl);
+		$http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+		if (curl_errno($curl)) {
+			error_log('Failed to update integration status: ' . curl_error($curl));
+			curl_close($curl);
+			return;
+		}
+
+		curl_close($curl);
+
+		if ($http_code !== 200) {
+			error_log("API request failed with status code: $http_code");
+			return;
+		}
+
+	}
+
+	/**
+     * Fetches the organization ID using the API key.
+     * 
+     * @param string $api_key API Key
+     * @return string|null Organization ID or null on failure
+     */
+	public static function get_organization_id($api_key) {
+		// Create an instance of the settings class
+		$settings = new Gendox_Ai_Chat_For_Wordpress_Settings();
+
+		// Call the gendox_get_api_call method
+		$response = $settings->gendox_get_api_call($api_key);
+		$http_code = $response[0];
+		$body = $response[1];
+
+		if ($http_code !== 200) {
+			error_log("Failed to validate API key: HTTP Status $http_code");
+			return null;
+		}
+
+		$data = json_decode($body, true);
+
+		if (!isset($data['organizations'][0]['id'])) {
+			error_log('Organization ID not found in /profile response.');
+			return null;
+		}
+
+		return $data['organizations'][0]['id'];
+	}
+
+}
