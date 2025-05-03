@@ -58,13 +58,13 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 	 */
 	public function add_settings_page()
 	{
-		add_options_page(
-			__('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
+		add_menu_page(
+            __('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
 			__('Gendox AI Chat', 'gendox-ai-chat-for-wordpress'),
 			'edit_posts',
-			'gendox-ai-chat-settings',
-			array($this, 'settings_page_content')
-		);
+           'gendox-ai-chat-settings',
+           array($this, 'settings_page_content')
+        );
 	}
 
 	public function add_hidden_settings_page()

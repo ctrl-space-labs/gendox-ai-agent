@@ -162,6 +162,7 @@ class Gendox_API_Endpoints
                 'content' => $content,
 //                 'type' => $post->post_type,
 //                 'status' => $post->post_status,
+				'source' => get_permalink($post->ID)
             );
 
             return new WP_REST_Response($content_data, 200);
