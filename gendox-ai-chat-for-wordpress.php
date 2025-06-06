@@ -28,7 +28,7 @@ if (! defined('ABSPATH')) exit;
 define('GENDOX_NAME', 'Gendox AI Chat for Wordpress');
 
 // Plugin version
-define('GENDOX_VERSION', '1.0.0');
+define('GENDOX_VERSION', '1.0.1');
 
 // Plugin Root File
 define('GENDOX_PLUGIN_FILE', __FILE__);
