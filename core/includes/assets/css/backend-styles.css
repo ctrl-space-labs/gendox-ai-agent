@@ -363,3 +363,17 @@ body {
 #wp_gendox_api_key {
     max-width: 400px;
 }
+
+/* API Settings form styling */
+#api-settings .form-control {
+    max-width: 500px;
+    margin-bottom: 5px;
+}
+
+#api-settings .description {
+    color: #666;
+    font-style: italic;
+    font-size: 13px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
