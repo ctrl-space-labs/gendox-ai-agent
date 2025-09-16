@@ -188,7 +188,14 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 	{
 		// Check if we're on the Gendox AI Chat settings page
 		$screen = get_current_screen();
-		if ($screen->id === 'settings_page_gendox-ai-chat-settings') {
+		
+		// Debug: Add screen ID to check what it actually is
+		// error_log('Current screen ID: ' . $screen->id);
+		
+		// Check for both possible screen IDs - main menu page and settings submenu page
+		if ($screen->id === 'settings_page_gendox-ai-chat-settings' || 
+		    $screen->id === 'toplevel_page_gendox-ai-chat-settings' ||
+		    strpos($screen->id, 'gendox-ai-chat-settings') !== false) {
 			// Enqueue Bootstrap styles and scripts only on this page
 			wp_enqueue_style('bootstrap-css', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css');
 			wp_enqueue_script('bootstrap-js', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js', array('jquery'), null, true);

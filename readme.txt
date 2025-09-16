@@ -7,7 +7,7 @@ Tags:
 Requires at least: 
 Tested up to: 
 Requires PHP: 
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,7 +57,10 @@ An answer to that question.
 
 == Changelog ==
 
-= 1.0.1: June 06, 2024 =
+= 1.0.2: Sept 16, 2025 =
+* Minor Bug fix in the UI
+
+= 1.0.1: June 06, 2025 =
 * Add source url in the integration API
 
 = 1.0.0: October 16, 2024 =

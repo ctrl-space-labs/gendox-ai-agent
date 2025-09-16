@@ -124,7 +124,20 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 	public function chat_script_url_field_callback()
 	{
 		$chat_script_url = get_option('gendox_chat_script_url', 'https://dev.gendox.ctrlspace.dev');
-		echo '<input type="text" class="form-control" name="gendox_chat_script_url" value="' . esc_attr($chat_script_url) . '" />';
+		echo '<input type="url" class="form-control" name="gendox_chat_script_url" value="' . esc_attr($chat_script_url) . '" placeholder="https://dev.gendox.ctrlspace.dev" />';
+		echo '<p class="description">' . __('The URL where the Gendox chat script is hosted.', 'gendox-ai-chat-for-wordpress') . '</p>';
+	}
+
+	public function api_base_url_field_callback()
+	{
+		$api_base_url = get_option('gendox_api_base_url', 'https://dev.gendox.ctrlspace.dev');
+		echo '<input type="url" class="form-control" name="gendox_api_base_url" value="' . esc_attr($api_base_url) . '" placeholder="https://dev.gendox.ctrlspace.dev" />';
+		echo '<p class="description">' . __('The base URL for Gendox API endpoints.', 'gendox-ai-chat-for-wordpress') . '</p>';
+	}
+
+	public function api_settings_section_callback()
+	{
+		echo '<p>' . __('Configure API endpoints and URLs for the Gendox service.', 'gendox-ai-chat-for-wordpress') . '</p>';
 	}
 
 	/**
@@ -164,6 +177,30 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 			'',
 			array($this, 'gendox_projects_section'),
 			'gendox-ai-chat-wp-settings'
+		);
+
+		// API Settings section
+		register_setting('gendox_api_settings_group', 'gendox_chat_script_url');
+		register_setting('gendox_api_settings_group', 'gendox_api_base_url');
+		add_settings_section(
+			'gendox_api_main_section',
+			__('API Settings', 'gendox-ai-chat-for-wordpress'),
+			array($this, 'api_settings_section_callback'),
+			'gendox-ai-chat-api-settings'
+		);
+		add_settings_field(
+			'gendox_chat_script_url',
+			__('Chat Script URL', 'gendox-ai-chat-for-wordpress'),
+			array($this, 'chat_script_url_field_callback'),
+			'gendox-ai-chat-api-settings',
+			'gendox_api_main_section'
+		);
+		add_settings_field(
+			'gendox_api_base_url',
+			__('Gendox API Base URL', 'gendox-ai-chat-for-wordpress'),
+			array($this, 'api_base_url_field_callback'),
+			'gendox-ai-chat-api-settings',
+			'gendox_api_main_section'
 		);
 	}
 
@@ -222,6 +259,9 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 				<li class="nav-item">
 					<a class="nav-link <?php echo ($active_tab == 'wp-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=wp-settings"><?php _e('WordPress Settings', 'gendox-ai-chat-for-wordpress'); ?></a>
 				</li>
+				<li class="nav-item">
+					<a class="nav-link <?php echo ($active_tab == 'api-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=api-settings"><?php _e('API Settings', 'gendox-ai-chat-for-wordpress'); ?></a>
+				</li>
 			</ul>
 
 			<!-- Tab Content -->
@@ -237,7 +277,8 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 
 					<!-- Responsive Iframe Container -->
 					<div style="position: relative; padding-top: 56.25%; margin-top: 20px;"> <!-- 16:9 Aspect Ratio -->
-						<iframe src="https://dev.gendox.ctrlspace.dev/login-prompt" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allowfullscreen></iframe>
+						<?php $chat_script_url = get_option('gendox_chat_script_url', 'https://dev.gendox.ctrlspace.dev'); ?>
+						<iframe src="<?php echo esc_url(rtrim($chat_script_url, '/') . '/login-prompt'); ?>" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allowfullscreen></iframe>
 					</div>
 				</div>
 
@@ -250,6 +291,15 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 					</form>
 				</div>
 
+				<div class="tab-pane fade <?php echo ($active_tab == 'api-settings') ? 'show active' : ''; ?>" id="api-settings">
+					<form method="post" action="options.php">
+						<?php
+						settings_fields('gendox_api_settings_group');
+						do_settings_sections('gendox-ai-chat-api-settings');
+						submit_button();
+						?>
+					</form>
+				</div>
 
 			</div>
 		</div>
@@ -535,10 +585,11 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 
 	public function gendox_get_api_call($api_key)
 	{
+		$api_base_url = get_option('gendox_api_base_url', 'https://dev.gendox.ctrlspace.dev');
 		$curl = curl_init();
 
 		curl_setopt_array($curl, array(
-			CURLOPT_URL => 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/profile',
+			CURLOPT_URL => rtrim($api_base_url, '/') . '/gendox/api/v1/profile',
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_ENCODING => '',
 			CURLOPT_MAXREDIRS => 10,
