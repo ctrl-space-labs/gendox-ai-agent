@@ -1,4 +1,4 @@
-# Gendox AI Chat for WordPress
+# Gendox WP AI Agent
 
 Connect a WordPress site to [Gendox](https://gendox.dev): train an AI agent on your posts,
 pages and products, then serve it as a chat widget on the pages you choose.
