@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Gendox AI Chat for Wordpress
+ * Gendox WP AI Agent
  *
  * @package       GENDOX
  * @author        Ctrl+Space Labs
@@ -9,13 +9,13 @@
  * @version       1.0.3
  *
  * @wordpress-plugin
- * Plugin Name:   Gendox AI Chat for Wordpress
+ * Plugin Name:   Gendox WP AI Agent
  * Plugin URI:    https://gendox.dev
- * Description:   Create AI Agents, train them with website data, add the agent/chat in any webpage
+ * Description:   Add an AI chat agent to your site, trained on your own posts, pages and products.
  * Version:       1.0.3
  * Author:        Ctrl+Space Labs
  * Author URI:    https://www.ctrlspace.dev/
- * Text Domain:   gendox-ai-chat-for-wordpress
+ * Text Domain:   gendox-wp-ai-agent
  * Domain Path:   /languages
  * License:       GPLv2
  * License URI:   https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,7 +25,7 @@
 if (! defined('ABSPATH')) exit;
 
 // Plugin name
-define('GENDOX_NAME', 'Gendox AI Chat for Wordpress');
+define('GENDOX_NAME', 'Gendox WP AI Agent');
 
 // Plugin version
 define('GENDOX_VERSION', '1.0.3');
@@ -49,7 +49,7 @@ define('GENDOX_PLUGIN_URL', plugin_dir_url(GENDOX_PLUGIN_FILE));
 /**
  * Load the main class for the core functionality
  */
-require_once GENDOX_PLUGIN_DIR . 'core/class-gendox-ai-chat-for-wordpress.php';
+require_once GENDOX_PLUGIN_DIR . 'core/class-gendox-wp-ai-agent.php';
 
 /**
  * The main function to load the only instance
@@ -57,11 +57,11 @@ require_once GENDOX_PLUGIN_DIR . 'core/class-gendox-ai-chat-for-wordpress.php';
  *
  * @author  Ctrl+Space Labs
  * @since   1.0.0
- * @return  object|Gendox_Ai_Chat_For_Wordpress
+ * @return  object|Gendox_WP_AI_Agent
  */
 function GENDOX()
 {
-	return Gendox_Ai_Chat_For_Wordpress::instance();
+	return Gendox_WP_AI_Agent::instance();
 }
 
 GENDOX();
@@ -100,9 +100,9 @@ register_activation_hook(__FILE__, 'gendox_activate_plugin');
 register_deactivation_hook(__FILE__, 'gendox_deactivate_plugin');
 
 function gendox_activate_plugin() {
-    Gendox_Ai_Chat_For_Wordpress_Helpers::update_integration_status('ACTIVE');
+    Gendox_WP_AI_Agent_Helpers::update_integration_status('ACTIVE');
 }
 
 function gendox_deactivate_plugin() {
-    Gendox_Ai_Chat_For_Wordpress_Helpers::update_integration_status('INACTIVE');
+    Gendox_WP_AI_Agent_Helpers::update_integration_status('INACTIVE');
 }

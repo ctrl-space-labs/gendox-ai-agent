@@ -4,17 +4,17 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /**
- * Class Gendox_Ai_Chat_For_Wordpress_Helpers
+ * Class Gendox_WP_AI_Agent_Helpers
  *
  * This class contains repetitive functions that
  * are used globally within the plugin.
  *
  * @package		GENDOX
- * @subpackage	Classes/Gendox_Ai_Chat_For_Wordpress_Helpers
+ * @subpackage	Classes/Gendox_WP_AI_Agent_Helpers
  * @author		Ctrl+Space Labs
  * @since		1.0.0
  */
-class Gendox_Ai_Chat_For_Wordpress_Helpers {
+class Gendox_WP_AI_Agent_Helpers {
 
 	/**
      * Updates the integration status via API.
@@ -96,7 +96,7 @@ class Gendox_Ai_Chat_For_Wordpress_Helpers {
      */
 	public static function get_organization_id($api_key) {
 		// Create an instance of the settings class
-		$settings = new Gendox_Ai_Chat_For_Wordpress_Settings();
+		$settings = new Gendox_WP_AI_Agent_Settings();
 
 		// Call the gendox_get_api_call method
 		$response = $settings->gendox_get_api_call($api_key);

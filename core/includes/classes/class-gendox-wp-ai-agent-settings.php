@@ -4,17 +4,17 @@
 if (! defined('ABSPATH')) exit;
 
 /**
- * Class Gendox_Ai_Chat_For_Wordpress_Settings
+ * Class Gendox_WP_AI_Agent_Settings
  *
  * This class contains all of the plugin settings.
  * Here you can configure the whole plugin data.
  *
  * @package		GENDOX
- * @subpackage	Classes/Gendox_Ai_Chat_For_Wordpress_Settings
+ * @subpackage	Classes/Gendox_WP_AI_Agent_Settings
  * @author		Ctrl+Space Labs
  * @since		1.0.0
  */
-class Gendox_Ai_Chat_For_Wordpress_Settings
+class Gendox_WP_AI_Agent_Settings
 {
 
 	/**
@@ -26,7 +26,7 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 	private $plugin_name;
 
 	/**
-	 * Our Gendox_Ai_Chat_For_Wordpress_Settings constructor 
+	 * Our Gendox_WP_AI_Agent_Settings constructor 
 	 * to run the plugin logic.
 	 *
 	 * @since 1.0.0
@@ -59,8 +59,8 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 	public function add_settings_page()
 	{
 		add_menu_page(
-            __('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
-			__('Gendox AI Chat', 'gendox-ai-chat-for-wordpress'),
+            __('Gendox AI Chat Settings', 'gendox-wp-ai-agent'),
+			__('Gendox AI Chat', 'gendox-wp-ai-agent'),
 			'edit_posts',
            'gendox-ai-chat-settings',
            array($this, 'settings_page_content')
@@ -89,7 +89,7 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		// Output the page content
 ?>
 		<div class="wrap">
-			<h1><?php _e('Chat Script Settings', 'gendox-ai-chat-for-wordpress'); ?></h1>
+			<h1><?php _e('Chat Script Settings', 'gendox-wp-ai-agent'); ?></h1>
 			<form method="post" action="options.php">
 				<?php
 				// Same options group as the visible API Settings tab, so both places
@@ -112,20 +112,20 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		// the one group instead of a second, separate one.
 		add_settings_section(
 			'chat_script_main_section',
-			__('Chat Script Settings', 'gendox-ai-chat-for-wordpress'),
+			__('Chat Script Settings', 'gendox-wp-ai-agent'),
 			null,
 			'chat-script-settings'
 		);
 		add_settings_field(
 			'gendox_chat_script_url',
-			__('Chat Script URL', 'gendox-ai-chat-for-wordpress'),
+			__('Chat Script URL', 'gendox-wp-ai-agent'),
 			array($this, 'chat_script_url_field_callback'),
 			'chat-script-settings',
 			'chat_script_main_section'
 		);
 		add_settings_field(
 			'gendox_api_base_url',
-			__('Gendox API Base URL', 'gendox-ai-chat-for-wordpress'),
+			__('Gendox API Base URL', 'gendox-wp-ai-agent'),
 			array($this, 'api_base_url_field_callback'),
 			'chat-script-settings',
 			'chat_script_main_section'
@@ -137,19 +137,19 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 	{
 		$chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL);
 		echo '<input type="url" class="form-control" name="gendox_chat_script_url" value="' . esc_attr($chat_script_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
-		echo '<p class="description">' . __('The URL where the Gendox chat script is hosted.', 'gendox-ai-chat-for-wordpress') . '</p>';
+		echo '<p class="description">' . __('The URL where the Gendox chat script is hosted.', 'gendox-wp-ai-agent') . '</p>';
 	}
 
 	public function api_base_url_field_callback()
 	{
 		$api_base_url = get_option('gendox_api_base_url', GENDOX_DEFAULT_URL);
 		echo '<input type="url" class="form-control" name="gendox_api_base_url" value="' . esc_attr($api_base_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
-		echo '<p class="description">' . __('The base URL for Gendox API endpoints.', 'gendox-ai-chat-for-wordpress') . '</p>';
+		echo '<p class="description">' . __('The base URL for Gendox API endpoints.', 'gendox-wp-ai-agent') . '</p>';
 	}
 
 	public function api_settings_section_callback()
 	{
-		echo '<p>' . __('Configure API endpoints and URLs for the Gendox service.', 'gendox-ai-chat-for-wordpress') . '</p>';
+		echo '<p>' . __('Configure API endpoints and URLs for the Gendox service.', 'gendox-wp-ai-agent') . '</p>';
 	}
 
 	/**
@@ -163,13 +163,13 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		register_setting('gendox_ai_chat_settings_group', 'gendox_ai_chat_api_key');
 		add_settings_section(
 			'gendox_ai_chat_main_section',
-			__('AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
+			__('AI Chat Settings', 'gendox-wp-ai-agent'),
 			null,
 			'gendox-ai-chat-settings'
 		);
 		add_settings_field(
 			'gendox_ai_chat_api_key',
-			__('API Key', 'gendox-ai-chat-for-wordpress'),
+			__('API Key', 'gendox-wp-ai-agent'),
 			array($this, 'api_key_field_callback'),
 			'gendox-ai-chat-settings',
 			'gendox_ai_chat_main_section'
@@ -179,7 +179,7 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		register_setting('gendox_wp_settings_group', 'gendox_wp_setting_example');
 		add_settings_section(
 			'gendox_wp_main_section',
-			__('WordPress Settings', 'gendox-ai-chat-for-wordpress'),
+			__('WordPress Settings', 'gendox-wp-ai-agent'),
 			null,
 			'gendox-ai-chat-wp-settings'
 		);
@@ -196,20 +196,20 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		register_setting('gendox_api_settings_group', 'gendox_api_base_url');
 		add_settings_section(
 			'gendox_api_main_section',
-			__('API Settings', 'gendox-ai-chat-for-wordpress'),
+			__('API Settings', 'gendox-wp-ai-agent'),
 			array($this, 'api_settings_section_callback'),
 			'gendox-ai-chat-api-settings'
 		);
 		add_settings_field(
 			'gendox_chat_script_url',
-			__('Chat Script URL', 'gendox-ai-chat-for-wordpress'),
+			__('Chat Script URL', 'gendox-wp-ai-agent'),
 			array($this, 'chat_script_url_field_callback'),
 			'gendox-ai-chat-api-settings',
 			'gendox_api_main_section'
 		);
 		add_settings_field(
 			'gendox_api_base_url',
-			__('Gendox API Base URL', 'gendox-ai-chat-for-wordpress'),
+			__('Gendox API Base URL', 'gendox-wp-ai-agent'),
 			array($this, 'api_base_url_field_callback'),
 			'gendox-ai-chat-api-settings',
 			'gendox_api_main_section'
@@ -245,18 +245,18 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'ai-chat-settings';
 	?>
 		<div class="wrap">
-			<h1><?php echo esc_html(__('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress')); ?></h1>
+			<h1><?php echo esc_html(__('Gendox AI Chat Settings', 'gendox-wp-ai-agent')); ?></h1>
 
 			<!-- Tabs Navigation -->
 			<ul class="nav nav-tabs" id="gendoxSettingsTabs" role="tablist">
 				<li class="nav-item">
-					<a class="nav-link <?php echo ($active_tab == 'ai-chat-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=ai-chat-settings"><?php _e('AI Chat Settings', 'gendox-ai-chat-for-wordpress'); ?></a>
+					<a class="nav-link <?php echo ($active_tab == 'ai-chat-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=ai-chat-settings"><?php _e('AI Chat Settings', 'gendox-wp-ai-agent'); ?></a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link <?php echo ($active_tab == 'wp-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=wp-settings"><?php _e('WordPress Settings', 'gendox-ai-chat-for-wordpress'); ?></a>
+					<a class="nav-link <?php echo ($active_tab == 'wp-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=wp-settings"><?php _e('WordPress Settings', 'gendox-wp-ai-agent'); ?></a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link <?php echo ($active_tab == 'api-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=api-settings"><?php _e('API Settings', 'gendox-ai-chat-for-wordpress'); ?></a>
+					<a class="nav-link <?php echo ($active_tab == 'api-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=api-settings"><?php _e('API Settings', 'gendox-wp-ai-agent'); ?></a>
 				</li>
 			</ul>
 
@@ -309,16 +309,16 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		$table_name = $wpdb->prefix . 'gendox_projects';
 		$projects = $wpdb->get_results("SELECT * FROM $table_name");
 
-		echo '<h3>' . __('Gendox Projects', 'gendox-ai-chat-for-wordpress') . '</h3>';
+		echo '<h3>' . __('Gendox Projects', 'gendox-wp-ai-agent') . '</h3>';
 	?>
 		<div id="gendox_projects_container">
 			<table id="projects_table" class="table table-hover table-light">
 				<thead class="thead-light">
 					<tr>
-						<th><?php _e('ID', 'gendox-ai-chat-for-wordpress'); ?></th>
-						<th><?php _e('Project Name', 'gendox-ai-chat-for-wordpress'); ?></th>
-						<th><?php _e('Description', 'gendox-ai-chat-for-wordpress'); ?></th>
-						<th><?php _e('Actions', 'gendox-ai-chat-for-wordpress'); ?></th>
+						<th><?php _e('ID', 'gendox-wp-ai-agent'); ?></th>
+						<th><?php _e('Project Name', 'gendox-wp-ai-agent'); ?></th>
+						<th><?php _e('Description', 'gendox-wp-ai-agent'); ?></th>
+						<th><?php _e('Actions', 'gendox-wp-ai-agent'); ?></th>
 					</tr>
 				</thead>
 				<tbody id="projects_list">
@@ -338,7 +338,7 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="4"><?php _e('No projects found.', 'gendox-ai-chat-for-wordpress'); ?></td>
+							<td colspan="4"><?php _e('No projects found.', 'gendox-wp-ai-agent'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
@@ -375,19 +375,19 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 			<span id="closeViewModal">&times;</span> <!-- Close button -->
 			<h2>View Project</h2>
 			<div id="projectDetails">
-				<p><strong><?php _e('Project ID:', 'gendox-ai-chat-for-wordpress'); ?></strong> <span id="view_projectId"></span></p>
-				<p><strong><?php _e('Project Name:', 'gendox-ai-chat-for-wordpress'); ?></strong> <span id="view_projectName"></span></p>
-				<p><strong><?php _e('Project Description:', 'gendox-ai-chat-for-wordpress'); ?></strong> <span id="view_projectDescription"></span></p>
+				<p><strong><?php _e('Project ID:', 'gendox-wp-ai-agent'); ?></strong> <span id="view_projectId"></span></p>
+				<p><strong><?php _e('Project Name:', 'gendox-wp-ai-agent'); ?></strong> <span id="view_projectName"></span></p>
+				<p><strong><?php _e('Project Description:', 'gendox-wp-ai-agent'); ?></strong> <span id="view_projectDescription"></span></p>
 				<div class="gendoxAssignedItemsType">
-					<span><strong><?php _e('Assigned Posts:', 'gendox-ai-chat-for-wordpress'); ?></strong></span>
+					<span><strong><?php _e('Assigned Posts:', 'gendox-wp-ai-agent'); ?></strong></span>
 					<div id="view_assignedPosts" class="gendoxAssignedItems"></div>
 				</div>
 				<div class="gendoxAssignedItemsType">
-					<span><strong><?php _e('Assigned Products:', 'gendox-ai-chat-for-wordpress'); ?></strong></span>
+					<span><strong><?php _e('Assigned Products:', 'gendox-wp-ai-agent'); ?></strong></span>
 					<div id="view_assignedProducts" class="gendoxAssignedItems"></div>
 				</div>
 				<div class="gendoxAssignedItemsType">
-					<span><strong><?php _e('Assigned Pages:', 'gendox-ai-chat-for-wordpress'); ?></strong></span>
+					<span><strong><?php _e('Assigned Pages:', 'gendox-wp-ai-agent'); ?></strong></span>
 					<div id="view_assignedPages" class="gendoxAssignedItems"></div>
 				</div>
 			</div>
@@ -790,7 +790,7 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		$project_id = isset($_POST['project_id']) ? sanitize_text_field($_POST['project_id']) : '';
 
 		if (empty($project_id)) {
-			wp_send_json_error(__('Project ID is missing.', 'gendox-ai-chat-for-wordpress'));
+			wp_send_json_error(__('Project ID is missing.', 'gendox-wp-ai-agent'));
 		}
 
 		// Save data as an option with the project ID
@@ -799,7 +799,7 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 			'taxonomies' => $taxonomies,
 		]);
 
-		wp_send_json_success(__('Chat settings saved successfully.', 'gendox-ai-chat-for-wordpress'));
+		wp_send_json_success(__('Chat settings saved successfully.', 'gendox-wp-ai-agent'));
 	}
 
 	// Get chat settings for a project
@@ -810,7 +810,7 @@ class Gendox_Ai_Chat_For_Wordpress_Settings
 		$project_id = isset($_POST['project_id']) ? sanitize_text_field($_POST['project_id']) : '';
 
 		if (empty($project_id)) {
-			wp_send_json_error(__('Project ID is missing.', 'gendox-ai-chat-for-wordpress'));
+			wp_send_json_error(__('Project ID is missing.', 'gendox-wp-ai-agent'));
 		}
 
 		// Retrieve the saved settings for the project

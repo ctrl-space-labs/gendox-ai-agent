@@ -4,20 +4,20 @@
 if (! defined('ABSPATH')) exit;
 
 /**
- * Class Gendox_Ai_Chat_For_Wordpress_Run
+ * Class Gendox_WP_AI_Agent_Run
  *
  * Thats where we bring the plugin to life
  *
  * @package		GENDOX
- * @subpackage	Classes/Gendox_Ai_Chat_For_Wordpress_Run
+ * @subpackage	Classes/Gendox_WP_AI_Agent_Run
  * @author		Ctrl+Space Labs
  * @since		1.0.0
  */
-class Gendox_Ai_Chat_For_Wordpress_Run
+class Gendox_WP_AI_Agent_Run
 {
 
 	/**
-	 * Our Gendox_Ai_Chat_For_Wordpress_Run constructor 
+	 * Our Gendox_WP_AI_Agent_Run constructor 
 	 * to run the plugin logic.
 	 *
 	 * @since 1.0.0
@@ -105,8 +105,8 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 		$settings_link = sprintf(
 			'<a href="%s" title="%s">%s</a>',
 			admin_url('options-general.php?page=gendox-ai-chat-settings'),
-			__('Settings', 'gendox-ai-chat-for-wordpress'),
-			__('Settings', 'gendox-ai-chat-for-wordpress')
+			__('Settings', 'gendox-wp-ai-agent'),
+			__('Settings', 'gendox-wp-ai-agent')
 		);
 
 		// Add it to the links array
@@ -126,17 +126,20 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 	 */
 	public function enqueue_backend_scripts_and_styles()
 	{
-		wp_enqueue_style('gendox-backend-styles', GENDOX_PLUGIN_URL . 'core/includes/assets/css/backend-styles.css?ver2=' . rand(), array(), GENDOX_VERSION, 'all');
-		wp_enqueue_script('gendox-backend-scripts', GENDOX_PLUGIN_URL . 'core/includes/assets/js/backend-scripts.js?ver2=' . rand(), array(), GENDOX_VERSION, false);
+		// GENDOX_VERSION is the cache-buster; do not append a random query string, it
+		// would defeat browser caching on every page load.
+		wp_enqueue_style('gendox-backend-styles', GENDOX_PLUGIN_URL . 'core/includes/assets/css/backend-styles.css', array(), GENDOX_VERSION, 'all');
+		wp_enqueue_script('gendox-backend-scripts', GENDOX_PLUGIN_URL . 'core/includes/assets/js/backend-scripts.js', array(), GENDOX_VERSION, false);
 		wp_localize_script('gendox-backend-scripts', 'gendox', array(
-			'plugin_name'   	=> __(GENDOX_NAME, 'gendox-ai-chat-for-wordpress'),
+			'plugin_name'   	=> __(GENDOX_NAME, 'gendox-wp-ai-agent'),
 			'ajax_url' => admin_url('admin-ajax.php'),
 			'nonce' => wp_create_nonce('gendox_nonce')
 		));
 
-		// enqueue select2
-		wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
-		wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), null, true);
+		// enqueue select2 (bundled locally - wordpress.org does not allow loading
+		// executable assets from third-party CDNs)
+		wp_enqueue_style('select2', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/select2/select2.min.css', array(), '4.1.0-rc.0');
+		wp_enqueue_script('select2', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/select2/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
 	}
 
 	/**
@@ -153,31 +156,31 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 	{
 		// Main menu item
 		$admin_bar->add_menu(array(
-			'id'    => 'gendox-ai-chat-for-wordpress-id',
-			'title' => __('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
+			'id'    => 'gendox-wp-ai-agent-id',
+			'title' => __('Gendox AI Chat Settings', 'gendox-wp-ai-agent'),
 			'href'  => admin_url('options-general.php?page=gendox-ai-chat-settings'), // Link to the main settings page
 			'meta'  => array(
-				'title' => __('Gendox AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
-				'class' => 'gendox-ai-chat-for-wordpress-class',
+				'title' => __('Gendox AI Chat Settings', 'gendox-wp-ai-agent'),
+				'class' => 'gendox-wp-ai-agent-class',
 			),
 		));
 
 		// Sub-menu items for each tab
 		$tabs = [
-			'ai-chat-settings' => __('AI Chat Settings', 'gendox-ai-chat-for-wordpress'),
-			'wp-settings'      => __('WordPress Settings', 'gendox-ai-chat-for-wordpress'),
-			'api-settings'     => __('API Settings', 'gendox-ai-chat-for-wordpress'),
+			'ai-chat-settings' => __('AI Chat Settings', 'gendox-wp-ai-agent'),
+			'wp-settings'      => __('WordPress Settings', 'gendox-wp-ai-agent'),
+			'api-settings'     => __('API Settings', 'gendox-wp-ai-agent'),
 		];
 
 		foreach ($tabs as $tab_id => $tab_title) {
 			$admin_bar->add_menu(array(
-				'id'     => 'gendox-ai-chat-for-wordpress-' . $tab_id,
+				'id'     => 'gendox-wp-ai-agent-' . $tab_id,
 				'title'  => $tab_title,
-				'parent' => 'gendox-ai-chat-for-wordpress-id',
+				'parent' => 'gendox-wp-ai-agent-id',
 				'href'   => admin_url('options-general.php?page=gendox-ai-chat-settings&tab=' . $tab_id), // Link to each tab
 				'meta'   => array(
 					'title' => $tab_title,
-					'class' => 'gendox-ai-chat-for-wordpress-sub-class',
+					'class' => 'gendox-wp-ai-agent-sub-class',
 				),
 			));
 		}
@@ -196,9 +199,10 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 		if ($screen->id === 'settings_page_gendox-ai-chat-settings' || 
 		    $screen->id === 'toplevel_page_gendox-ai-chat-settings' ||
 		    strpos($screen->id, 'gendox-ai-chat-settings') !== false) {
-			// Enqueue Bootstrap styles and scripts only on this page
-			wp_enqueue_style('bootstrap-css', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css');
-			wp_enqueue_script('bootstrap-js', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js', array('jquery'), null, true);
+			// Enqueue Bootstrap only on this page. Bundled locally - wordpress.org does
+			// not allow loading executable assets from third-party CDNs.
+			wp_enqueue_style('bootstrap-css', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/bootstrap/bootstrap.min.css', array(), '4.5.2');
+			wp_enqueue_script('bootstrap-js', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/bootstrap/bootstrap.bundle.min.js', array('jquery'), '4.5.2', true);
 		}
 	}
 
@@ -209,7 +213,7 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 		foreach ($post_types as $post_type) {
 			add_meta_box(
 				'project_assignment_metabox',
-				__('Assign Project', 'gendox-ai-chat-for-wordpress'),
+				__('Assign Project', 'gendox-wp-ai-agent'),
 				array($this, 'render_project_metabox'),
 				$post_type,
 				'side',
@@ -240,7 +244,7 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 			}
 		}
 
-		echo '<label>' . __('Select Projects:', 'gendox-ai-chat-for-wordpress') . '</label><br>';
+		echo '<label>' . __('Select Projects:', 'gendox-wp-ai-agent') . '</label><br>';
 
 		// Loop through projects and create checkboxes
 		foreach ($projects as $project) {
@@ -296,7 +300,7 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 	// 2. Add Project Assignment in Quick Edit
 	public function add_project_column($columns)
 	{
-		$columns['assigned_project'] = __('Assigned Project', 'gendox-ai-chat-for-wordpress');
+		$columns['assigned_project'] = __('Assigned Project', 'gendox-wp-ai-agent');
 		return $columns;
 	}
 
@@ -325,7 +329,7 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 					echo '<span class="assigned-project" data-gendoxId="' . $project['id'] . '">' . $project['name'] . '</span><br>';
 				}
 			} else {
-				echo __('-', 'gendox-ai-chat-for-wordpress');
+				echo __('-', 'gendox-wp-ai-agent');
 			}
 		}
 	}
@@ -340,7 +344,7 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 
 			echo '<fieldset class="inline-edit-col-right">';
 			echo '<div class="inline-edit-col">';
-			echo '<label><p class="title"><strong>' . __('Assigned Projects', 'gendox-ai-chat-for-wordpress') . '</strong></p><div class="checkbox-group">';
+			echo '<label><p class="title"><strong>' . __('Assigned Projects', 'gendox-wp-ai-agent') . '</strong></p><div class="checkbox-group">';
 
 			foreach ($projects as $project) {
 				echo '<label class="inline-edit-project-label">';
@@ -432,8 +436,8 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 
 		// Add Assign and Remove actions for each project
 		foreach ($projects as $project) {
-			$bulk_actions['assign_to_project_' . $project->gendoxId] = sprintf(__('Assign to Project: %s', 'gendox-ai-chat-for-wordpress'), $project->name);
-			$bulk_actions['remove_from_project_' . $project->gendoxId] = sprintf(__('Remove from Project: %s', 'gendox-ai-chat-for-wordpress'), $project->name);
+			$bulk_actions['assign_to_project_' . $project->gendoxId] = sprintf(__('Assign to Project: %s', 'gendox-wp-ai-agent'), $project->name);
+			$bulk_actions['remove_from_project_' . $project->gendoxId] = sprintf(__('Remove from Project: %s', 'gendox-wp-ai-agent'), $project->name);
 		}
 
 		return $bulk_actions;
@@ -492,7 +496,7 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 			$count = intval($_REQUEST['bulk_assigned_to_project']);
 			$screen = get_current_screen();
 			$post_type = $screen->post_type;
-			$message = _n('%s item updated.', '%s items updated.', $count, 'gendox-ai-chat-for-wordpress');
+			$message = _n('%s item updated.', '%s items updated.', $count, 'gendox-wp-ai-agent');
 			printf('<div id="message" class="updated notice is-dismissible"><p>' . sprintf($message, $count) . '</p></div>');
 		}
 	}
@@ -541,7 +545,9 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 		if ($project_id) {
 			// get the project organization id from the project id from table gendox_projects
 			$table_name = $wpdb->prefix . 'gendox_projects';
-			$project = $wpdb->get_row("SELECT * FROM $table_name WHERE gendoxId = '$project_id'");
+			$project = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM $table_name WHERE gendoxId = %s", $project_id )
+			);
 			if ($project) {
 				$organization_id = $project->organizationId;
 			}

@@ -2,17 +2,17 @@
 
 // Exit if accessed directly.
 if (! defined('ABSPATH')) exit;
-if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
+if (! class_exists('Gendox_WP_AI_Agent')) :
 
 	/**
-	 * Main Gendox_Ai_Chat_For_Wordpress Class.
+	 * Main Gendox_WP_AI_Agent Class.
 	 *
 	 * @package		GENDOX
-	 * @subpackage	Classes/Gendox_Ai_Chat_For_Wordpress
+	 * @subpackage	Classes/Gendox_WP_AI_Agent
 	 * @since		1.0.0
 	 * @author		Ctrl+Space Labs
 	 */
-	final class Gendox_Ai_Chat_For_Wordpress
+	final class Gendox_WP_AI_Agent
 	{
 
 		/**
@@ -20,7 +20,7 @@ if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
 		 *
 		 * @access	private
 		 * @since	1.0.0
-		 * @var		object|Gendox_Ai_Chat_For_Wordpress
+		 * @var		object|Gendox_WP_AI_Agent
 		 */
 		private static $instance;
 
@@ -29,7 +29,7 @@ if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
 		 *
 		 * @access	public
 		 * @since	1.0.0
-		 * @var		object|Gendox_Ai_Chat_For_Wordpress_Helpers
+		 * @var		object|Gendox_WP_AI_Agent_Helpers
 		 */
 		public $helpers;
 
@@ -38,7 +38,7 @@ if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
 		 *
 		 * @access	public
 		 * @since	1.0.0
-		 * @var		object|Gendox_Ai_Chat_For_Wordpress_Settings
+		 * @var		object|Gendox_WP_AI_Agent_Settings
 		 */
 		public $settings;
 
@@ -53,7 +53,7 @@ if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
 		 */
 		public function __clone()
 		{
-			_doing_it_wrong(__FUNCTION__, __('You are not allowed to clone this class.', 'gendox-ai-chat-for-wordpress'), '1.0.0');
+			_doing_it_wrong(__FUNCTION__, __('You are not allowed to clone this class.', 'gendox-wp-ai-agent'), '1.0.0');
 		}
 
 		/**
@@ -65,31 +65,31 @@ if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
 		 */
 		public function __wakeup()
 		{
-			_doing_it_wrong(__FUNCTION__, __('You are not allowed to unserialize this class.', 'gendox-ai-chat-for-wordpress'), '1.0.0');
+			_doing_it_wrong(__FUNCTION__, __('You are not allowed to unserialize this class.', 'gendox-wp-ai-agent'), '1.0.0');
 		}
 
 		/**
-		 * Main Gendox_Ai_Chat_For_Wordpress Instance.
+		 * Main Gendox_WP_AI_Agent Instance.
 		 *
-		 * Insures that only one instance of Gendox_Ai_Chat_For_Wordpress exists in memory at any one
+		 * Insures that only one instance of Gendox_WP_AI_Agent exists in memory at any one
 		 * time. Also prevents needing to define globals all over the place.
 		 *
 		 * @access		public
 		 * @since		1.0.0
 		 * @static
-		 * @return		object|Gendox_Ai_Chat_For_Wordpress	The one true Gendox_Ai_Chat_For_Wordpress
+		 * @return		object|Gendox_WP_AI_Agent	The one true Gendox_WP_AI_Agent
 		 */
 		public static function instance()
 		{
-			if (! isset(self::$instance) && ! (self::$instance instanceof Gendox_Ai_Chat_For_Wordpress)) {
-				self::$instance					= new Gendox_Ai_Chat_For_Wordpress;
+			if (! isset(self::$instance) && ! (self::$instance instanceof Gendox_WP_AI_Agent)) {
+				self::$instance					= new Gendox_WP_AI_Agent;
 				self::$instance->base_hooks();
 				self::$instance->includes();
-				self::$instance->helpers		= new Gendox_Ai_Chat_For_Wordpress_Helpers();
-				self::$instance->settings		= new Gendox_Ai_Chat_For_Wordpress_Settings();
+				self::$instance->helpers		= new Gendox_WP_AI_Agent_Helpers();
+				self::$instance->settings		= new Gendox_WP_AI_Agent_Settings();
 
 				//Fire the plugin logic
-				new Gendox_Ai_Chat_For_Wordpress_Run();
+				new Gendox_WP_AI_Agent_Run();
 
 				//Load the api endpoints
 				new Gendox_API_Endpoints();
@@ -113,10 +113,10 @@ if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
 		 */
 		private function includes()
 		{
-			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-ai-chat-for-wordpress-helpers.php';
-			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-ai-chat-for-wordpress-settings.php';
+			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-wp-ai-agent-helpers.php';
+			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-wp-ai-agent-settings.php';
 
-			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-ai-chat-for-wordpress-run.php';
+			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-wp-ai-agent-run.php';
 			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-api-endpoints.php';
 		}
 
@@ -141,7 +141,7 @@ if (! class_exists('Gendox_Ai_Chat_For_Wordpress')) :
 		 */
 		public function load_textdomain()
 		{
-			load_plugin_textdomain('gendox-ai-chat-for-wordpress', FALSE, dirname(plugin_basename(GENDOX_PLUGIN_FILE)) . '/languages/');
+			load_plugin_textdomain('gendox-wp-ai-agent', FALSE, dirname(plugin_basename(GENDOX_PLUGIN_FILE)) . '/languages/');
 		}
 	}
 
