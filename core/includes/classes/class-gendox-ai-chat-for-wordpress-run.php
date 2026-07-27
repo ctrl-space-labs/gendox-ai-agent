@@ -545,7 +545,7 @@ class Gendox_Ai_Chat_For_Wordpress_Run
 			if ($project) {
 				$organization_id = $project->organizationId;
 			}
-			$chat_script_url = get_option('gendox_chat_script_url', 'https://dev.gendox.ctrlspace.dev');
+			$chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL);
 ?>
 			<script
 				id="gendox-chat-script"

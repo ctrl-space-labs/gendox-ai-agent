@@ -38,7 +38,7 @@ class Gendox_Ai_Chat_For_Wordpress_Helpers {
 			return;
 		}
 
-		$api_base_url = get_option('gendox_api_base_url', 'https://dev.gendox.ctrlspace.dev');
+		$api_base_url = get_option('gendox_api_base_url', GENDOX_DEFAULT_URL);
 		$url = rtrim($api_base_url, '/') . "/gendox/api/v1/organizations/$organization_id/websites/integration";
 
 		$body = json_encode([

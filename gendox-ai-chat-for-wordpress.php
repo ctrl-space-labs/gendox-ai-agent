@@ -6,13 +6,13 @@
  * @package       GENDOX
  * @author        Ctrl+Space Labs
  * @license       gplv2
- * @version       1.0.2
+ * @version       1.0.3
  *
  * @wordpress-plugin
  * Plugin Name:   Gendox AI Chat for Wordpress
  * Plugin URI:    https://gendox.dev
  * Description:   Create AI Agents, train them with website data, add the agent/chat in any webpage
- * Version:       1.0.2
+ * Version:       1.0.3
  * Author:        Ctrl+Space Labs
  * Author URI:    https://www.ctrlspace.dev/
  * Text Domain:   gendox-ai-chat-for-wordpress
@@ -28,7 +28,11 @@ if (! defined('ABSPATH')) exit;
 define('GENDOX_NAME', 'Gendox AI Chat for Wordpress');
 
 // Plugin version
-define('GENDOX_VERSION', '1.0.2');
+define('GENDOX_VERSION', '1.0.3');
+
+// Default Gendox instance for new installs (Chat Script URL and Gendox API Base URL).
+// Change this in one place to update the default for future installs.
+define('GENDOX_DEFAULT_URL', 'https://app.gendox.dev');
 
 // Plugin Root File
 define('GENDOX_PLUGIN_FILE', __FILE__);

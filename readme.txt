@@ -7,7 +7,7 @@ Tags:
 Requires at least: 
 Tested up to: 
 Requires PHP: 
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -56,6 +56,13 @@ An answer to that question.
 4. Click on `Activate plugin`
 
 == Changelog ==
+
+= 1.0.3: July 25, 2026 =
+* Default Chat Script URL and Gendox API Base URL for new installs are now https://app.gendox.dev
+* Fix Chat Script Settings silently discarding the URL on save
+* Align the admin screens with the Gendox app look and feel
+* Give the embedded Gendox panel a proper height and framing
+* Stop the plugin styles from restyling every WordPress admin page
 
 = 1.0.2: Sept 16, 2025 =
 * Minor Bug fix in the UI
