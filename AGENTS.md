@@ -46,6 +46,56 @@ Columns: `id`, `organizationId`, `gendoxId`, `name`, `description`, `postIds` (l
 `GENDOX_DEFAULT_URL` in the entry file is the **only** hardcoded Gendox URL. Both URL
 options fall back to it. Change it there and nowhere else.
 
+**Invariant: every `gendox_ai_chat_positions_{projectId}` must have a matching
+`gendox_projects` row.** The table and these options are written by different code paths
+(`gendox_fetch_projects()` syncs the table from the API; `gendox_save_chat_settings()`
+writes the options), so they can drift apart. When they do, `add_footer_script_for_chat()`
+still matches the orphaned option, finds no row to read `organizationId` from, and renders
+the widget with `data-organization-id=""` — the frontend then calls
+`/organizations//projects` with an empty path segment.
+
+Two guards keep the invariant, and both must stay:
+
+1. `gendox_fetch_projects()` deletes the position options for every row its
+   `DELETE ... WHERE gendoxId NOT IN (...)` removes. Collect the ids **before** the delete.
+2. `gendox_save_chat_settings()` rejects a `project_id` with no row, so a stale settings
+   tab cannot recreate an orphan.
+
+This is easy to trigger by pointing an existing install at a **different organization**
+(new API key), because the sync then deletes every project belonging to the old org and
+leaves their options behind. It has already happened in both the local dev DB and the
+wp-demo clone.
+
+**Uninstall.** `uninstall.php` (not `register_uninstall_hook`) drops the table, removes this
+plugin's options, and sends `INACTIVE` to the backend. It must keep an **explicit** option
+list — sibling plugins on the same sites share the `gendox_` prefix
+(`gendox_checkout_validator_*`, `gendox_client_id`, `gendox_stripe_*`, `gendox_auth_url`,
+`gendox_api_url`), so a `LIKE 'gendox%'` sweep would destroy their settings. No plugin code
+is loaded during uninstall, so the file re-declares what it needs.
+
+## Multisite: not supported, on purpose
+
+The plugin is **single-site only**, and the code should stay internally consistent about
+that. `uninstall.php` briefly had a `get_sites()`/`switch_to_blog()` cleanup loop; it was
+removed because it implied a capability nothing else provides. Before adding any
+multisite handling, all of these need addressing together:
+
+- `gendox_create_projects_table()` ignores the `$network_wide` argument WordPress passes to
+  activation hooks, so a network activation creates exactly **one** `gendox_projects`
+  table. Other sites — and any site created later, since nothing hooks
+  `wp_initialize_site` — never get one. Queries then hit a missing table and fail silently
+  (`$wpdb` suppresses errors), surfacing as empty project lists and a widget rendered with
+  `data-organization-id=""`.
+- `update_integration_status()` posts `site_url()`, so a network activation announces only
+  one site to the backend.
+- Options are per-site, so the API key would need configuring on every site — an unmade
+  product decision.
+
+Unrelated but adjacent: `gendox_create_projects_table()` passes `CREATE TABLE IF NOT
+EXISTS` to `dbDelta()`, which parses the statement itself and expects plain `CREATE TABLE`.
+Harmless today because the schema hasn't changed since 1.0.0, but schema *upgrades* may
+not apply until that's fixed.
+
 ## Conventions
 
 - Tabs for indentation in PHP, matching the existing files.

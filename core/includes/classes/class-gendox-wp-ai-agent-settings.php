@@ -543,14 +543,47 @@ class Gendox_WP_AI_Agent_Settings
 					}
 				}
 
-				// Delete projects from the database that no longer exist in the API response
-				$api_project_ids_placeholder = implode(', ', array_fill(0, count($api_project_ids), '%s'));
-				$wpdb->query(
-					$wpdb->prepare(
-						"DELETE FROM $table_name WHERE gendoxId NOT IN ($api_project_ids_placeholder)",
-						...$api_project_ids
-					)
-				);
+				// Delete projects from the database that no longer exist in the API response.
+				//
+				// The stale rows' chat-placement options MUST go with them. Each project can
+				// have a `gendox_ai_chat_positions_{gendoxId}` option, written independently by
+				// gendox_save_chat_settings(). Deleting only the row leaves that option orphaned
+				// forever: add_footer_script_for_chat() still matches on it, finds no row to read
+				// organizationId from, and emits the widget with data-organization-id="" - which
+				// makes the frontend call /organizations//projects with an empty segment.
+				// Nothing else in the plugin ever prunes these, so they accumulate silently.
+				if (empty($api_project_ids)) {
+					// No projects at all upstream. `IN ()` is a SQL syntax error, so this case
+					// has to be handled separately rather than folded into the query below.
+					$stale_project_ids = $wpdb->get_col("SELECT gendoxId FROM $table_name");
+					$wpdb->query("DELETE FROM $table_name");
+				} else {
+					$api_project_ids_placeholder = implode(', ', array_fill(0, count($api_project_ids), '%s'));
+
+					// Collect before deleting - afterwards the ids are gone.
+					$stale_project_ids = $wpdb->get_col(
+						$wpdb->prepare(
+							"SELECT gendoxId FROM $table_name WHERE gendoxId NOT IN ($api_project_ids_placeholder)",
+							...$api_project_ids
+						)
+					);
+
+					$wpdb->query(
+						$wpdb->prepare(
+							"DELETE FROM $table_name WHERE gendoxId NOT IN ($api_project_ids_placeholder)",
+							...$api_project_ids
+						)
+					);
+				}
+
+				// delete_option() rather than a bulk DELETE: these options are autoloaded, and
+				// only delete_option() invalidates the `alloptions` object cache. A raw DELETE
+				// would keep serving the removed values from cache until the next flush. The
+				// loop is bounded by the number of projects removed in this sync - typically
+				// zero, occasionally one or two - so the per-call cost is irrelevant here.
+				foreach ($stale_project_ids as $stale_project_id) {
+					delete_option("gendox_ai_chat_positions_{$stale_project_id}");
+				}
 
 				// Fetch and return the updated projects from the database
 				$projects = $wpdb->get_results("SELECT * FROM $table_name");
@@ -791,6 +824,21 @@ class Gendox_WP_AI_Agent_Settings
 
 		if (empty($project_id)) {
 			wp_send_json_error(__('Project ID is missing.', 'gendox-wp-ai-agent'));
+		}
+
+		// Only allow placement settings for a project that actually exists locally.
+		// Without this check the handler stores whatever project_id the browser posts, so a
+		// settings page left open across a project deletion (or a stale cached page) can
+		// recreate an orphaned gendox_ai_chat_positions_* option that no row backs - the
+		// empty-organization-id bug the sync in gendox_fetch_projects() now cleans up.
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'gendox_projects';
+		$project_exists = $wpdb->get_var(
+			$wpdb->prepare("SELECT id FROM $table_name WHERE gendoxId = %s", $project_id)
+		);
+
+		if (!$project_exists) {
+			wp_send_json_error(__('Unknown project. Refresh the projects list and try again.', 'gendox-wp-ai-agent'));
 		}
 
 		// Save data as an option with the project ID

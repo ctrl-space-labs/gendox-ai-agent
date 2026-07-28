@@ -5,7 +5,7 @@ Tags: ai, chatbot, ai agent, ai assistant, customer support
 Requires at least: 5.8
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -114,6 +114,14 @@ extra page context with each message. See the
 4. The AI chat widget on the front end
 
 == Changelog ==
+
+= 1.0.4: July 28, 2026 =
+* Remove the plugin's data on uninstall: the projects table, the API key and URL settings, and all per-project chat placement settings
+* Notify Gendox that the integration is inactive when the plugin is deleted, not only when it is deactivated
+* Fix the chat widget sending an empty organization id when a project had been removed from Gendox, which produced requests to /organizations//projects
+* Remove chat placement settings belonging to projects that no longer exist, instead of leaving them behind on every projects refresh
+* Reject chat placement settings saved against a project that is no longer available
+* Fix a database error when refreshing projects for an account with no projects
 
 = 1.0.3: July 25, 2026 =
 * Default Chat Script URL and Gendox API Base URL for new installs are now https://app.gendox.dev
