@@ -3,6 +3,18 @@ Backend related javascript
 ------------------------*/
 
 jQuery(document).ready(function ($) {
+    // Reveal/mask the API key field.
+    $('#gendox_toggle_api_key').on('click', function () {
+        var $button = $(this);
+        var $input = $('#gendox_api_key');
+        var reveal = $input.attr('type') === 'password';
+
+        $input.attr('type', reveal ? 'text' : 'password');
+        $button
+            .text(reveal ? $button.data('label-hide') : $button.data('label-show'))
+            .attr('aria-pressed', reveal ? 'true' : 'false');
+    });
+
     $('#test_connection_button').on('click', function () {
         var apiKey = $('#gendox_api_key').val();
         var connectionStatus = $('#connection_status');

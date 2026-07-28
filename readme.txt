@@ -116,6 +116,12 @@ extra page context with each message. See the
 == Changelog ==
 
 = 1.0.4: July 28, 2026 =
+* The settings screen is now a single page. The WordPress Settings and API Settings tabs are gone, and the API key and URL settings save together with one Save Changes button
+* Settings and projects are now grouped in bordered panels that span the full page width, so it is clear which button applies to which fields
+* Add a Gendox icon to the admin menu item
+* The API key is hidden by default, with a Show button to reveal it
+* Fix the embedded Gendox panel being blocked as insecure content on some deployments
+* Saving an API key for a different organization now moves the integration: the previous organization is deactivated and the new one activated. The key is only saved if both succeed
 * Remove the plugin's data on uninstall: the projects table, the API key and URL settings, and all per-project chat placement settings
 * Notify Gendox that the integration is inactive when the plugin is deleted, not only when it is deactivated
 * Fix the chat widget sending an empty organization id when a project had been removed from Gendox, which produced requests to /organizations//projects

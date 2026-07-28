@@ -29,21 +29,33 @@ class Gendox_WP_AI_Agent_Helpers {
 			return;
 		}
 
-		$domain = site_url();
-		$context_path = '/wp-json/gendox/v1';
-
 		$organization_id = self::get_organization_id($api_key);
 		if (!$organization_id) {
 			error_log('Failed to retrieve organization ID.');
 			return;
 		}
 
+		self::send_integration_status($api_key, $organization_id, $status);
+	}
+
+	/**
+	 * Sends an integration status for an explicit key and organization.
+	 *
+	 * Takes both as arguments so it can act on a key that is not the stored one - the API
+	 * key change flow has to reach the outgoing organization before the new key is saved.
+	 *
+	 * @param string $api_key
+	 * @param string $organization_id
+	 * @param string $status 'ACTIVE' or 'INACTIVE'
+	 * @return bool True when the API accepted the change.
+	 */
+	public static function send_integration_status($api_key, $organization_id, $status) {
 		$api_base_url = get_option('gendox_api_base_url', GENDOX_DEFAULT_URL);
 		$url = rtrim($api_base_url, '/') . "/gendox/api/v1/organizations/$organization_id/websites/integration";
 
 		$body = json_encode([
-			'domain' => $domain,
-			'contextPath' => $context_path,
+			'domain' => site_url(),
+			'contextPath' => '/wp-json/gendox/v1',
 			'apiKey' => ['apiKey' => $api_key],
 			'integrationType' => ['name' => 'API_INTEGRATION'],
 			'integrationStatus' => ['name' => $status],
@@ -70,22 +82,23 @@ class Gendox_WP_AI_Agent_Helpers {
 			CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2, // Enforce modern TLS
 		]);
 
-		$response = curl_exec($curl);
+		curl_exec($curl);
 		$http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
 		if (curl_errno($curl)) {
 			error_log('Failed to update integration status: ' . curl_error($curl));
 			curl_close($curl);
-			return;
+			return false;
 		}
 
 		curl_close($curl);
 
 		if ($http_code !== 200) {
 			error_log("API request failed with status code: $http_code");
-			return;
+			return false;
 		}
 
+		return true;
 	}
 
 	/**

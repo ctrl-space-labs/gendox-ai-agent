@@ -66,6 +66,37 @@ This is easy to trigger by pointing an existing install at a **different organiz
 leaves their options behind. It has already happened in both the local dev DB and the
 wp-demo clone.
 
+**Changing the API key moves the integration.**
+`Gendox_WP_AI_Agent_Settings::gendox_handle_api_key_change()` hooks
+`pre_update_option_gendox_ai_chat_api_key` — on the option, not a `sanitize_callback`, so
+it covers both settings pages that write the key. If the new key resolves to a different
+organization it sends `INACTIVE` for the old one and `ACTIVE` for the new, returning the
+old key (cancelling the save) if either fails, so the stored key always matches the live
+integration. Registered as a **static** callback: `get_organization_id()` constructs the
+settings class, and WordPress keys instance callbacks by object hash, so an instance
+callback registers a duplicate handler on every call and the save logic runs twice.
+
+**`/profile` responses are cached by CloudFront across callers — API key validation cannot
+be trusted until that is fixed.** The origin authenticates correctly (an unauthenticated
+request that reaches it returns HTTP 500 `Full authentication is required`), but the
+CloudFront distribution in front of `app.gendox.dev` caches the response with a cache key
+that does **not** include `x-api-key`, and ignores the origin's
+`no-cache, no-store, must-revalidate`. Once any successful `/profile` response is cached,
+every later caller gets it — verified with no API key at all returning HTTP 200, a real
+profile and `x-cache: RefreshHit`, `age: 40`.
+
+Consequences for this plugin, until the cache policy is corrected:
+
+- `Gendox_WP_AI_Agent_Helpers::get_organization_id()` may return an organization the
+  supplied key does not own, so the `gendox_api_key_invalid` branch in
+  `gendox_handle_api_key_change()` is unreachable and the organization comparison can be
+  wrong.
+- Nothing client-side fixes it: a cache-busting query string, a `Cache-Control: no-cache`
+  request header and dropping `Accept-Encoding` were all tried and all still hit the cache.
+
+The fix belongs in the CloudFront cache policy — do not cache `/gendox/api/v1/*`, or include
+the auth header in the cache key.
+
 **Uninstall.** `uninstall.php` (not `register_uninstall_hook`) drops the table, removes this
 plugin's options, and sends `INACTIVE` to the backend. It must keep an **explicit** option
 list — sibling plugins on the same sites share the `gendox_` prefix
@@ -102,18 +133,32 @@ not apply until that's fixed.
 - Admin CSS is scoped to `body.toplevel_page_gendox-ai-chat-settings`. The stylesheet
   loads on **every** admin page, so unscoped selectors leak into all of wp-admin — a bug
   that has already happened once. Never add a bare `body {}` or element selector.
+- The menu icon (`add_menu_page()`'s 6th argument) is a base64 data URI built from
+  `core/includes/assets/Gendox-G-logo-letter-white.svg` by `get_menu_icon()` in the
+  Settings class. It is a flat white recolour, not the brand gradient — WordPress applies
+  its own opacity treatment (dimmed when inactive, full when current) the same way it does
+  for dashicons, and a gradient would neither dim correctly nor read at 20px. If the
+  gradient mark ever needs regenerating from `Gendox-G-logo-letter.svg`, keep the white
+  variant a flat, single-colour recolour of the same paths.
 - Admin colours come from the Gendox app palette, declared as custom properties at the
   top of `backend-styles.css`.
 - Every `wp_ajax_*` handler verifies a nonce. Keep it that way.
 
 ## Gotchas
 
-**Two settings pages edit the same options.** The visible **API Settings** tab and the
-hidden page at `/wp-admin/admin.php?page=chat-script-settings` both render the same two
-URL fields and both save through `gendox_api_settings_group`. If you add a field to one,
-add it to the other, and register the option **once** in `register_settings()`. Registering
-a field whose `name` differs from the registered option makes WordPress silently discard
-the value on save — that bug shipped and went unnoticed for several releases.
+**Two settings pages edit the same options.** The **API Settings** section on the main
+screen and the hidden page at `/wp-admin/admin.php?page=chat-script-settings` both render
+the same two URL fields and both save through `gendox_api_settings_group`. If you add a
+field to one, add it to the other, and register the option **once** in
+`register_settings()`. Registering a field whose `name` differs from the registered option
+makes WordPress silently discard the value on save — that bug shipped and went unnoticed
+for several releases.
+
+**The settings screen is one page with two forms, not tabs.** `options.php` saves exactly
+one option group per submit, so the API key (`gendox_ai_chat_settings_group`) and the URL
+fields (`gendox_api_settings_group`) each keep their own form and Save button. The projects
+section renders **outside** both forms — it is AJAX-driven rather than Settings API driven,
+and its modals contain their own `<form>` elements, which would otherwise nest.
 
 **The widget `<script>` is raw HTML, not an enqueued asset.** It is echoed directly in
 `wp_footer`, so it has no handle and nothing can declare a dependency on it. This

@@ -96,32 +96,51 @@ properties to keep future tweaks in one place.
     max-width: 400px;
 }
 
-/*----------------- Tabs -----------------*/
-.toplevel_page_gendox-ai-chat-settings .nav-tabs {
-    border-bottom: 1px solid var(--gendox-border);
+/*----------------- Panels -----------------*/
+/* Each panel groups the fields that one button acts on: the settings panel ends with
+   Save Changes, the projects panel with Fetch Projects. Mirrors the framing of WordPress'
+   own .card/.postbox without adopting their headers. */
+.toplevel_page_gendox-ai-chat-settings .gendox-panel {
+    margin: 20px 0;
+    padding: 8px 20px 4px;
+    background: #fff;
+    border: 1px solid var(--gendox-border);
+    border-radius: var(--gendox-radius);
 }
 
-.toplevel_page_gendox-ai-chat-settings .nav-tabs .nav-link {
-    color: var(--gendox-text-muted);
-    border: none;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    font-weight: 500;
+/* Sections stack inside one panel, so separate all but the first. */
+.toplevel_page_gendox-ai-chat-settings .gendox-panel .gendox-panel-title + * {
+    margin-top: 0;
 }
 
-.toplevel_page_gendox-ai-chat-settings .nav-tabs .nav-link:hover {
+.toplevel_page_gendox-ai-chat-settings .gendox-panel .gendox-panel-title:not(:first-child) {
+    margin-top: 4px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gendox-border);
+}
+
+.toplevel_page_gendox-ai-chat-settings .gendox-panel-title {
+    margin: 12px 0 0;
+    font-size: 15px;
+    font-weight: 600;
     color: var(--gendox-text);
-    border-bottom-color: var(--gendox-border);
 }
 
-.toplevel_page_gendox-ai-chat-settings .nav-tabs .nav-link.active {
-    color: var(--gendox-primary-dark);
-    background: transparent;
-    border-bottom-color: var(--gendox-primary);
+/* The panel already delimits the group, so drop the rule core draws above the button. */
+.toplevel_page_gendox-ai-chat-settings .gendox-panel .submit {
+    margin: 0;
+    padding: 16px 0;
+    border-top: 1px solid var(--gendox-border);
 }
 
-#gendoxSettingsTabContent {
-    padding: 15px;
+/* Fetch Projects closes its panel the same way Save Changes closes the settings one. */
+.toplevel_page_gendox-ai-chat-settings #fetch_projects_button {
+    display: inline-block;
+    margin: 0 0 16px;
+}
+
+.toplevel_page_gendox-ai-chat-settings #projects_table {
+    margin-bottom: 16px;
 }
 
 /*----------------- Tables -----------------*/
@@ -440,15 +459,18 @@ properties to keep future tweaks in one place.
     border: none;
 }
 
-/*----------------- API Settings form styling -----------------*/
-#api-settings .form-control {
+/*----------------- Settings form styling -----------------*/
+/* Was scoped to #api-settings, the old tab pane id. The tabs are gone, so this now
+   targets the panel; the API key input is excluded because it sits in an input-group
+   with the Show and Test Connection buttons and sizes itself. */
+.toplevel_page_gendox-ai-chat-settings .gendox-panel .form-control:not(#gendox_api_key) {
     max-width: 500px;
     margin-bottom: 5px;
     border: 1px solid var(--gendox-border);
     border-radius: 6px;
 }
 
-#api-settings .description {
+.toplevel_page_gendox-ai-chat-settings .gendox-panel .description {
     color: var(--gendox-text-muted);
     font-style: italic;
     font-size: 13px;

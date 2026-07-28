@@ -49,6 +49,86 @@ class Gendox_WP_AI_Agent_Settings
 		add_action('wp_ajax_gendox_get_chat_settings', array($this, 'gendox_get_chat_settings'));
 		add_action('admin_menu', array($this, 'add_hidden_settings_page'));
 		add_action('admin_init', array($this, 'register_hidden_setting'));
+
+		// On the option rather than a sanitize_callback, so it covers both settings pages
+		// that write the API key.
+		//
+		// Static callback on purpose: get_organization_id() constructs this class, so an
+		// instance callback would register a second copy of the handler on every call - WP
+		// keys instance callbacks by object hash, but dedupes static ones.
+		add_filter('pre_update_option_gendox_ai_chat_api_key', array(__CLASS__, 'gendox_handle_api_key_change'), 10, 2);
+	}
+
+	/**
+	 * Moves the integration when the API key points at a different organization.
+	 *
+	 * Deactivates the outgoing organization and activates the incoming one. The key is only
+	 * saved if both calls succeed; on failure the previous state is restored and the old key
+	 * is kept, so the stored key always matches the active integration.
+	 *
+	 * @param string $new_value Incoming API key.
+	 * @param string $old_value Currently stored API key.
+	 * @return string The value to store.
+	 */
+	public static function gendox_handle_api_key_change($new_value, $old_value)
+	{
+		$new_value = is_string($new_value) ? trim($new_value) : $new_value;
+
+		if ($new_value === $old_value) {
+			return $new_value;
+		}
+
+		// Clearing the key: deactivate the current integration, but never block the save.
+		if (empty($new_value)) {
+			if (!empty($old_value)) {
+				$old_organization_id = Gendox_WP_AI_Agent_Helpers::get_organization_id($old_value);
+				if ($old_organization_id) {
+					Gendox_WP_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE');
+				}
+			}
+			return $new_value;
+		}
+
+		$new_organization_id = Gendox_WP_AI_Agent_Helpers::get_organization_id($new_value);
+		if (!$new_organization_id) {
+			add_settings_error(
+				'gendox_ai_chat_api_key',
+				'gendox_api_key_invalid',
+				__('The API key was not accepted by Gendox. The previous key has been kept.', 'gendox-wp-ai-agent')
+			);
+			return $old_value;
+		}
+
+		$old_organization_id = empty($old_value)
+			? null
+			: Gendox_WP_AI_Agent_Helpers::get_organization_id($old_value);
+
+		// Same organization, or no previous integration to move.
+		if (!$old_organization_id || $old_organization_id === $new_organization_id) {
+			return $new_value;
+		}
+
+		if (!Gendox_WP_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE')) {
+			add_settings_error(
+				'gendox_ai_chat_api_key',
+				'gendox_deactivate_failed',
+				__('Could not deactivate the integration for the current organization. The API key has not been changed.', 'gendox-wp-ai-agent')
+			);
+			return $old_value;
+		}
+
+		if (!Gendox_WP_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE')) {
+			// Put the outgoing organization back, so a failed switch leaves nothing deactivated.
+			Gendox_WP_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'ACTIVE');
+			add_settings_error(
+				'gendox_ai_chat_api_key',
+				'gendox_activate_failed',
+				__('Could not activate the integration for the new organization. The API key has not been changed.', 'gendox-wp-ai-agent')
+			);
+			return $old_value;
+		}
+
+		return $new_value;
 	}
 
 	/**
@@ -63,8 +143,38 @@ class Gendox_WP_AI_Agent_Settings
 			__('Gendox AI Chat', 'gendox-wp-ai-agent'),
 			'edit_posts',
            'gendox-ai-chat-settings',
-           array($this, 'settings_page_content')
+           array($this, 'settings_page_content'),
+           $this->get_menu_icon()
         );
+	}
+
+	/**
+	 * Menu icon as a base64 data URI.
+	 *
+	 * WordPress renders a data-URI SVG as the menu item's background image and applies the
+	 * same opacity treatment as its own dashicons - 60% when inactive, 100% when the menu is
+	 * current - so the mark is a flat white one rather than the brand gradient, which would
+	 * neither dim nor read at 20px. Inlining avoids an extra request and works whatever the
+	 * plugin directory is named.
+	 *
+	 * @return string Data URI, or a dashicon name if the file is unreadable.
+	 */
+	private function get_menu_icon()
+	{
+		static $icon = null;
+
+		if (null !== $icon) {
+			return $icon;
+		}
+
+		$path = GENDOX_PLUGIN_DIR . 'core/includes/assets/Gendox-G-logo-letter-white.svg';
+		$svg = is_readable($path) ? file_get_contents($path) : '';
+
+		$icon = $svg
+			? 'data:image/svg+xml;base64,' . base64_encode($svg)
+			: 'dashicons-format-chat';
+
+		return $icon;
 	}
 
 	public function add_hidden_settings_page()
@@ -175,15 +285,8 @@ class Gendox_WP_AI_Agent_Settings
 			'gendox_ai_chat_main_section'
 		);
 
-		// WordPress Settings section
-		register_setting('gendox_wp_settings_group', 'gendox_wp_setting_example');
-		add_settings_section(
-			'gendox_wp_main_section',
-			__('WordPress Settings', 'gendox-wp-ai-agent'),
-			null,
-			'gendox-ai-chat-wp-settings'
-		);
-
+		// Projects section. No registered option: the table is driven by AJAX, not by the
+		// Settings API, so there is no form to submit.
 		add_settings_section(
 			'gendox_projects_section',
 			'',
@@ -191,27 +294,34 @@ class Gendox_WP_AI_Agent_Settings
 			'gendox-ai-chat-wp-settings'
 		);
 
-		// API Settings section
+		// API Settings section, rendered on the same page and saved by the same form as the
+		// API key above, so the screen has one Save button.
+		//
+		// Both options stay registered under 'gendox_api_settings_group' as well: the hidden
+		// Chat Script Settings page still submits that group, and options.php only accepts
+		// values whitelisted for the group being saved.
+		register_setting('gendox_ai_chat_settings_group', 'gendox_chat_script_url');
+		register_setting('gendox_ai_chat_settings_group', 'gendox_api_base_url');
 		register_setting('gendox_api_settings_group', 'gendox_chat_script_url');
 		register_setting('gendox_api_settings_group', 'gendox_api_base_url');
 		add_settings_section(
 			'gendox_api_main_section',
 			__('API Settings', 'gendox-wp-ai-agent'),
 			array($this, 'api_settings_section_callback'),
-			'gendox-ai-chat-api-settings'
+			'gendox-ai-chat-settings'
 		);
 		add_settings_field(
 			'gendox_chat_script_url',
 			__('Chat Script URL', 'gendox-wp-ai-agent'),
 			array($this, 'chat_script_url_field_callback'),
-			'gendox-ai-chat-api-settings',
+			'gendox-ai-chat-settings',
 			'gendox_api_main_section'
 		);
 		add_settings_field(
 			'gendox_api_base_url',
 			__('Gendox API Base URL', 'gendox-wp-ai-agent'),
 			array($this, 'api_base_url_field_callback'),
-			'gendox-ai-chat-api-settings',
+			'gendox-ai-chat-settings',
 			'gendox_api_main_section'
 		);
 	}
@@ -226,8 +336,11 @@ class Gendox_WP_AI_Agent_Settings
 		$api_key = get_option('gendox_ai_chat_api_key');
 		echo '<div id="gendox_api_key_container">';
 		echo '<div class="input-group mb-3">';
-		echo '<input type="text" class="form-control" id="gendox_api_key" name="gendox_ai_chat_api_key" value="' . esc_attr($api_key) . '" />';
+		// Masked by default so the key is not readable over a shoulder or in a screen share.
+		// autocomplete="off" keeps browsers from offering it as a saved password.
+		echo '<input type="password" class="form-control" id="gendox_api_key" name="gendox_ai_chat_api_key" value="' . esc_attr($api_key) . '" autocomplete="off" spellcheck="false" />';
 		echo '<div class="input-group-append">';
+		echo '<button type="button" id="gendox_toggle_api_key" class="btn btn-outline-secondary" aria-controls="gendox_api_key" aria-pressed="false" data-label-show="' . esc_attr__('Show', 'gendox-wp-ai-agent') . '" data-label-hide="' . esc_attr__('Hide', 'gendox-wp-ai-agent') . '">' . esc_html__('Show', 'gendox-wp-ai-agent') . '</button>';
 		echo '<button type="button" id="test_connection_button" class="btn btn-outline-secondary">Test Connection</button>';
 		echo '</div>';
 		echo '</div>';
@@ -236,67 +349,84 @@ class Gendox_WP_AI_Agent_Settings
 	}
 
 	/**
-	 * The content of the settings page with tabs
+	 * Renders one settings section.
+	 *
+	 * Same output as do_settings_sections(), with two differences: it takes a single
+	 * section so sections can be placed individually on the page, and the heading is an
+	 * h3 under the page's h1 rather than core's h2.
+	 *
+	 * @param string $page       Settings page slug the section is registered on.
+	 * @param string $section_id Section id.
+	 * @return void
+	 */
+	private function render_settings_section($page, $section_id)
+	{
+		global $wp_settings_sections, $wp_settings_fields;
+
+		if (!isset($wp_settings_sections[$page][$section_id])) {
+			return;
+		}
+
+		$section = $wp_settings_sections[$page][$section_id];
+
+		if ($section['title']) {
+			echo '<h3 class="gendox-panel-title">' . esc_html($section['title']) . '</h3>';
+		}
+
+		if ($section['callback']) {
+			call_user_func($section['callback'], $section);
+		}
+
+		if (!isset($wp_settings_fields[$page][$section_id])) {
+			return;
+		}
+
+		echo '<table class="form-table" role="presentation">';
+		do_settings_fields($page, $section_id);
+		echo '</table>';
+	}
+
+	/**
+	 * The content of the settings page.
+	 *
+	 * Single page, no tabs: the WordPress and API sections held too little to justify one
+	 * each. The API key and both URL fields save together through one group, so there is a
+	 * single Save button. The projects section sits outside the form - it is driven by AJAX,
+	 * not by the Settings API, and wrapping it would nest the forms in its modals.
 	 *
 	 * @since 1.0.0
 	 */
 	public function settings_page_content()
 	{
-		$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'ai-chat-settings';
 	?>
 		<div class="wrap">
 			<h1><?php echo esc_html(__('Gendox AI Chat Settings', 'gendox-wp-ai-agent')); ?></h1>
 
-			<!-- Tabs Navigation -->
-			<ul class="nav nav-tabs" id="gendoxSettingsTabs" role="tablist">
-				<li class="nav-item">
-					<a class="nav-link <?php echo ($active_tab == 'ai-chat-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=ai-chat-settings"><?php _e('AI Chat Settings', 'gendox-wp-ai-agent'); ?></a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link <?php echo ($active_tab == 'wp-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=wp-settings"><?php _e('WordPress Settings', 'gendox-wp-ai-agent'); ?></a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link <?php echo ($active_tab == 'api-settings') ? 'active' : ''; ?>" href="?page=gendox-ai-chat-settings&tab=api-settings"><?php _e('API Settings', 'gendox-wp-ai-agent'); ?></a>
-				</li>
-			</ul>
-
-			<!-- Tab Content -->
-			<div class="tab-content" id="gendoxSettingsTabContent">
-				<div class="tab-pane fade <?php echo ($active_tab == 'ai-chat-settings') ? 'show active' : ''; ?>" id="ai-chat-settings">
-					<form method="post" action="options.php">
-						<?php
-						settings_fields('gendox_ai_chat_settings_group');
-						do_settings_sections('gendox-ai-chat-settings');
-						submit_button();
-						?>
-					</form>
-
-					<!-- Gendox app panel. Sizing/framing lives in backend-styles.css -->
-					<div class="gendox-app-frame">
-						<?php $chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL); ?>
-						<iframe src="<?php echo esc_url(rtrim($chat_script_url, '/') . '/login-prompt'); ?>" allowfullscreen></iframe>
-					</div>
+			<form method="post" action="options.php">
+				<?php settings_fields('gendox_ai_chat_settings_group'); ?>
+				<div class="gendox-panel">
+					<?php
+					// Both sections and the Save button share one panel, so it is obvious
+					// that Save Changes applies to everything inside it.
+					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_ai_chat_main_section');
+					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_api_main_section');
+					submit_button();
+					?>
 				</div>
+			</form>
 
-				<div class="tab-pane fade <?php echo ($active_tab == 'wp-settings') ? 'show active' : ''; ?>" id="wp-settings">
-					<form method="post" action="options.php">
-						<?php
-						settings_fields('gendox_wp_settings_group');
-						do_settings_sections('gendox-ai-chat-wp-settings');
-						?>
-					</form>
-				</div>
+			<div class="gendox-panel">
+				<?php $this->render_settings_section('gendox-ai-chat-wp-settings', 'gendox_projects_section'); ?>
+			</div>
 
-				<div class="tab-pane fade <?php echo ($active_tab == 'api-settings') ? 'show active' : ''; ?>" id="api-settings">
-					<form method="post" action="options.php">
-						<?php
-						settings_fields('gendox_api_settings_group');
-						do_settings_sections('gendox-ai-chat-api-settings');
-						submit_button();
-						?>
-					</form>
-				</div>
-
+			<!-- Gendox app panel. Sizing/framing lives in backend-styles.css -->
+			<div class="gendox-app-frame">
+				<?php $chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL); ?>
+				<!-- Trailing slash is required: the app redirects /login-prompt to
+				     /login-prompt/, and some deployments answer with an absolute http://
+				     Location, which a browser blocks as mixed content inside an https admin
+				     page. Requesting the canonical URL avoids the redirect entirely. -->
+				<iframe src="<?php echo esc_url(rtrim($chat_script_url, '/') . '/login-prompt/'); ?>" allowfullscreen></iframe>
 			</div>
 		</div>
 	<?php
@@ -309,7 +439,7 @@ class Gendox_WP_AI_Agent_Settings
 		$table_name = $wpdb->prefix . 'gendox_projects';
 		$projects = $wpdb->get_results("SELECT * FROM $table_name");
 
-		echo '<h3>' . __('Gendox Projects', 'gendox-wp-ai-agent') . '</h3>';
+		echo '<h3 class="gendox-panel-title">' . __('Gendox Projects', 'gendox-wp-ai-agent') . '</h3>';
 	?>
 		<div id="gendox_projects_container">
 			<table id="projects_table" class="table table-hover table-light">
@@ -543,24 +673,17 @@ class Gendox_WP_AI_Agent_Settings
 					}
 				}
 
-				// Delete projects from the database that no longer exist in the API response.
-				//
-				// The stale rows' chat-placement options MUST go with them. Each project can
-				// have a `gendox_ai_chat_positions_{gendoxId}` option, written independently by
-				// gendox_save_chat_settings(). Deleting only the row leaves that option orphaned
-				// forever: add_footer_script_for_chat() still matches on it, finds no row to read
-				// organizationId from, and emits the widget with data-organization-id="" - which
-				// makes the frontend call /organizations//projects with an empty segment.
-				// Nothing else in the plugin ever prunes these, so they accumulate silently.
+				// Delete projects that no longer exist in the API response, together with their
+				// chat placement options. An option left without its row makes
+				// add_footer_script_for_chat() render the widget with an empty organization id.
 				if (empty($api_project_ids)) {
-					// No projects at all upstream. `IN ()` is a SQL syntax error, so this case
-					// has to be handled separately rather than folded into the query below.
+					// `IN ()` is a SQL syntax error, so no-projects is handled separately.
 					$stale_project_ids = $wpdb->get_col("SELECT gendoxId FROM $table_name");
 					$wpdb->query("DELETE FROM $table_name");
 				} else {
 					$api_project_ids_placeholder = implode(', ', array_fill(0, count($api_project_ids), '%s'));
 
-					// Collect before deleting - afterwards the ids are gone.
+					// Collect before deleting.
 					$stale_project_ids = $wpdb->get_col(
 						$wpdb->prepare(
 							"SELECT gendoxId FROM $table_name WHERE gendoxId NOT IN ($api_project_ids_placeholder)",
@@ -576,11 +699,8 @@ class Gendox_WP_AI_Agent_Settings
 					);
 				}
 
-				// delete_option() rather than a bulk DELETE: these options are autoloaded, and
-				// only delete_option() invalidates the `alloptions` object cache. A raw DELETE
-				// would keep serving the removed values from cache until the next flush. The
-				// loop is bounded by the number of projects removed in this sync - typically
-				// zero, occasionally one or two - so the per-call cost is irrelevant here.
+				// delete_option(), not a bulk DELETE: these options are autoloaded and only
+				// delete_option() invalidates the `alloptions` cache.
 				foreach ($stale_project_ids as $stale_project_id) {
 					delete_option("gendox_ai_chat_positions_{$stale_project_id}");
 				}
@@ -826,11 +946,8 @@ class Gendox_WP_AI_Agent_Settings
 			wp_send_json_error(__('Project ID is missing.', 'gendox-wp-ai-agent'));
 		}
 
-		// Only allow placement settings for a project that actually exists locally.
-		// Without this check the handler stores whatever project_id the browser posts, so a
-		// settings page left open across a project deletion (or a stale cached page) can
-		// recreate an orphaned gendox_ai_chat_positions_* option that no row backs - the
-		// empty-organization-id bug the sync in gendox_fetch_projects() now cleans up.
+		// Reject a project that no longer exists locally, so a stale settings page cannot
+		// store an option with no matching row.
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'gendox_projects';
 		$project_exists = $wpdb->get_var(
