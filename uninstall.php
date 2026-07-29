@@ -24,6 +24,11 @@ const GENDOX_UNINSTALL_OPTIONS = array(
 	'gendox_ai_chat_api_key',
 	'gendox_api_base_url',
 	'gendox_chat_script_url',
+	'gendox_chat_initial_state',
+	'gendox_local_context_selected_text_enabled',
+	'gendox_open_web_page_tool_enabled',
+	'gendox_local_context_max_responses',
+	'gendox_local_context_max_wait_ms',
 );
 
 /**

@@ -575,13 +575,19 @@ class Gendox_WP_AI_Agent_Run
 				$organization_id = $project->organizationId;
 			}
 			$chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL);
+			$widget_options  = Gendox_WP_AI_Agent_Helpers::get_widget_script_options();
 ?>
 			<script
 				id="gendox-chat-script"
 				src="<?php echo esc_url(rtrim($chat_script_url, '/') . '/gendox-sdk/gendox-widget-plugin.js'); ?>"
 				data-gendox-src="<?php echo esc_url($chat_script_url); ?>"
 				data-organization-id="<?php echo esc_attr($organization_id); ?>"
-				data-project-id="<?php echo esc_attr($project_id); ?>">
+				data-project-id="<?php echo esc_attr($project_id); ?>"
+				data-gendox-chat-initial-state="<?php echo esc_attr($widget_options['gendox_chat_initial_state']); ?>"
+				data-gendox-local-context-selected-text-enabled="<?php echo esc_attr($widget_options['gendox_local_context_selected_text_enabled']); ?>"
+				data-gendox-open-web-page-tool-enabled="<?php echo esc_attr($widget_options['gendox_open_web_page_tool_enabled']); ?>"
+				data-gendox-local-context-max-responses="<?php echo esc_attr($widget_options['gendox_local_context_max_responses']); ?>"
+				data-gendox-local-context-max-wait-ms="<?php echo esc_attr($widget_options['gendox_local_context_max_wait_ms']); ?>">
 			</script>
 <?php
 		}

@@ -257,6 +257,14 @@ class Gendox_WP_AI_Agent_Settings
 			'chat-script-settings',
 			'chat_script_main_section'
 		);
+
+		add_settings_section(
+			'chat_script_widget_section',
+			__('Widget Options', 'gendox-wp-ai-agent'),
+			array($this, 'widget_options_section_callback'),
+			'chat-script-settings'
+		);
+		$this->add_widget_option_fields('chat-script-settings', 'chat_script_widget_section');
 	}
 
 
@@ -277,6 +285,174 @@ class Gendox_WP_AI_Agent_Settings
 	public function api_settings_section_callback()
 	{
 		echo '<p>' . __('Configure API endpoints and URLs for the Gendox service.', 'gendox-wp-ai-agent') . '</p>';
+	}
+
+	public function widget_options_section_callback()
+	{
+		echo '<p>' . __('Controls emitted as data-* attributes on the public chat widget script.', 'gendox-wp-ai-agent') . '</p>';
+	}
+
+	/**
+	 * Register the five widget-option fields on a settings page/section.
+	 *
+	 * Shared by the main settings screen and the hidden Chat Script Settings page so both
+	 * stay in sync (same gotcha as the URL fields).
+	 *
+	 * @param string $page    Settings page slug.
+	 * @param string $section Section id.
+	 * @return void
+	 */
+	private function add_widget_option_fields($page, $section)
+	{
+		add_settings_field(
+			'gendox_chat_initial_state',
+			__('Initial Chat State', 'gendox-wp-ai-agent'),
+			array($this, 'chat_initial_state_field_callback'),
+			$page,
+			$section
+		);
+		add_settings_field(
+			'gendox_local_context_selected_text_enabled',
+			__('Selected Text Context', 'gendox-wp-ai-agent'),
+			array($this, 'local_context_selected_text_field_callback'),
+			$page,
+			$section
+		);
+		add_settings_field(
+			'gendox_open_web_page_tool_enabled',
+			__('Open Web Page Tool', 'gendox-wp-ai-agent'),
+			array($this, 'open_web_page_tool_field_callback'),
+			$page,
+			$section
+		);
+		add_settings_field(
+			'gendox_local_context_max_responses',
+			__('Local Context Max Responses', 'gendox-wp-ai-agent'),
+			array($this, 'local_context_max_responses_field_callback'),
+			$page,
+			$section
+		);
+		add_settings_field(
+			'gendox_local_context_max_wait_ms',
+			__('Local Context Max Wait (ms)', 'gendox-wp-ai-agent'),
+			array($this, 'local_context_max_wait_ms_field_callback'),
+			$page,
+			$section
+		);
+	}
+
+	/**
+	 * Register a widget option under both settings groups that can save it.
+	 *
+	 * @param string $option            Option name.
+	 * @param array  $sanitize_callback Settings API args including sanitize_callback.
+	 * @return void
+	 */
+	private function register_widget_option($option, $args)
+	{
+		register_setting('gendox_ai_chat_settings_group', $option, $args);
+		register_setting('gendox_api_settings_group', $option, $args);
+	}
+
+	/**
+	 * Sanitize open/closed initial state.
+	 *
+	 * @param mixed $value Submitted value.
+	 * @return string
+	 */
+	public function sanitize_chat_initial_state($value)
+	{
+		$value = is_string($value) ? strtolower(trim($value)) : '';
+		return in_array($value, array('open', 'closed'), true) ? $value : 'closed';
+	}
+
+	/**
+	 * Sanitize a true/false string for data-* attributes.
+	 *
+	 * @param mixed $value Submitted value.
+	 * @return string
+	 */
+	public function sanitize_true_false($value)
+	{
+		if (is_bool($value)) {
+			return $value ? 'true' : 'false';
+		}
+		$value = is_string($value) ? strtolower(trim($value)) : '';
+		return in_array($value, array('1', 'true', 'yes', 'on'), true) ? 'true' : 'false';
+	}
+
+	/**
+	 * Sanitize a positive integer stored as a string.
+	 *
+	 * @param mixed $value   Submitted value.
+	 * @param int   $default Fallback when empty or invalid.
+	 * @return string
+	 */
+	public function sanitize_positive_int_string($value, $default = 1)
+	{
+		$int = absint($value);
+		if ($int < 1) {
+			$int = absint($default);
+		}
+		return (string) $int;
+	}
+
+	public function sanitize_local_context_max_responses($value)
+	{
+		return $this->sanitize_positive_int_string($value, 1);
+	}
+
+	public function sanitize_local_context_max_wait_ms($value)
+	{
+		return $this->sanitize_positive_int_string($value, 500);
+	}
+
+	public function chat_initial_state_field_callback()
+	{
+		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$value = get_option('gendox_chat_initial_state', $defaults['gendox_chat_initial_state']);
+		echo '<select class="form-control" name="gendox_chat_initial_state">';
+		echo '<option value="closed"' . selected($value, 'closed', false) . '>' . esc_html__('Closed', 'gendox-wp-ai-agent') . '</option>';
+		echo '<option value="open"' . selected($value, 'open', false) . '>' . esc_html__('Open', 'gendox-wp-ai-agent') . '</option>';
+		echo '</select>';
+		echo '<p class="description">' . esc_html__('Whether the chat widget starts open or closed on page load.', 'gendox-wp-ai-agent') . '</p>';
+	}
+
+	public function local_context_selected_text_field_callback()
+	{
+		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$value = get_option('gendox_local_context_selected_text_enabled', $defaults['gendox_local_context_selected_text_enabled']);
+		// Hidden field so an unchecked box still posts "false" (Settings API skips missing keys).
+		echo '<input type="hidden" name="gendox_local_context_selected_text_enabled" value="false" />';
+		echo '<label><input type="checkbox" name="gendox_local_context_selected_text_enabled" value="true"' . checked($value, 'true', false) . ' /> ';
+		echo esc_html__('Enable selected-text local context', 'gendox-wp-ai-agent') . '</label>';
+		echo '<p class="description">' . esc_html__('Allow the widget to use text the visitor has selected on the page as context.', 'gendox-wp-ai-agent') . '</p>';
+	}
+
+	public function open_web_page_tool_field_callback()
+	{
+		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$value = get_option('gendox_open_web_page_tool_enabled', $defaults['gendox_open_web_page_tool_enabled']);
+		echo '<input type="hidden" name="gendox_open_web_page_tool_enabled" value="false" />';
+		echo '<label><input type="checkbox" name="gendox_open_web_page_tool_enabled" value="true"' . checked($value, 'true', false) . ' /> ';
+		echo esc_html__('Enable open-web-page tool', 'gendox-wp-ai-agent') . '</label>';
+		echo '<p class="description">' . esc_html__('Allow the agent to open web pages as a tool during chat.', 'gendox-wp-ai-agent') . '</p>';
+	}
+
+	public function local_context_max_responses_field_callback()
+	{
+		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$value = get_option('gendox_local_context_max_responses', $defaults['gendox_local_context_max_responses']);
+		echo '<input type="number" class="form-control" name="gendox_local_context_max_responses" value="' . esc_attr($value) . '" min="1" step="1" />';
+		echo '<p class="description">' . esc_html__('Maximum number of local-context responses the widget will collect.', 'gendox-wp-ai-agent') . '</p>';
+	}
+
+	public function local_context_max_wait_ms_field_callback()
+	{
+		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$value = get_option('gendox_local_context_max_wait_ms', $defaults['gendox_local_context_max_wait_ms']);
+		echo '<input type="number" class="form-control" name="gendox_local_context_max_wait_ms" value="' . esc_attr($value) . '" min="1" step="1" />';
+		echo '<p class="description">' . esc_html__('How long (in milliseconds) to wait for local-context responses.', 'gendox-wp-ai-agent') . '</p>';
 	}
 
 	/**
@@ -341,6 +517,35 @@ class Gendox_WP_AI_Agent_Settings
 			'gendox-ai-chat-settings',
 			'gendox_api_main_section'
 		);
+
+		// Widget Options: emitted as data-* on the public chat script.
+		$this->register_widget_option('gendox_chat_initial_state', array(
+			'sanitize_callback' => array($this, 'sanitize_chat_initial_state'),
+			'default'           => 'closed',
+		));
+		$this->register_widget_option('gendox_local_context_selected_text_enabled', array(
+			'sanitize_callback' => array($this, 'sanitize_true_false'),
+			'default'           => 'true',
+		));
+		$this->register_widget_option('gendox_open_web_page_tool_enabled', array(
+			'sanitize_callback' => array($this, 'sanitize_true_false'),
+			'default'           => 'true',
+		));
+		$this->register_widget_option('gendox_local_context_max_responses', array(
+			'sanitize_callback' => array($this, 'sanitize_local_context_max_responses'),
+			'default'           => '1',
+		));
+		$this->register_widget_option('gendox_local_context_max_wait_ms', array(
+			'sanitize_callback' => array($this, 'sanitize_local_context_max_wait_ms'),
+			'default'           => '500',
+		));
+		add_settings_section(
+			'gendox_widget_options_section',
+			__('Widget Options', 'gendox-wp-ai-agent'),
+			array($this, 'widget_options_section_callback'),
+			'gendox-ai-chat-settings'
+		);
+		$this->add_widget_option_fields('gendox-ai-chat-settings', 'gendox_widget_options_section');
 	}
 
 	/**
@@ -427,6 +632,7 @@ class Gendox_WP_AI_Agent_Settings
 					// that Save Changes applies to everything inside it.
 					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_ai_chat_main_section');
 					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_api_main_section');
+					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_widget_options_section');
 					submit_button();
 					?>
 				</div>

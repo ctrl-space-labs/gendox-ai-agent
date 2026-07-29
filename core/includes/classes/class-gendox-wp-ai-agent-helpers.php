@@ -131,4 +131,35 @@ class Gendox_WP_AI_Agent_Helpers {
 		return $data['organizations'][0]['id'];
 	}
 
+	/**
+	 * Defaults for the chat widget <script> data-* attributes.
+	 *
+	 * Matches the Gendox SDK's documented defaults so a fresh install emits the same
+	 * attributes as the reference embed snippet.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function get_widget_script_defaults() {
+		return array(
+			'gendox_chat_initial_state'                      => 'closed',
+			'gendox_local_context_selected_text_enabled'     => 'true',
+			'gendox_open_web_page_tool_enabled'              => 'true',
+			'gendox_local_context_max_responses'             => '1',
+			'gendox_local_context_max_wait_ms'               => '500',
+		);
+	}
+
+	/**
+	 * Stored widget script options, with SDK defaults applied when unset.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function get_widget_script_options() {
+		$options = array();
+		foreach ( self::get_widget_script_defaults() as $option => $default ) {
+			$options[ $option ] = (string) get_option( $option, $default );
+		}
+		return $options;
+	}
+
 }
