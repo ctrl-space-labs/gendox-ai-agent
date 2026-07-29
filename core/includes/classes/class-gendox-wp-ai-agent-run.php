@@ -352,14 +352,14 @@ class Gendox_WP_AI_Agent_Run
 
 				if (isset($assigned_items[$item_key]) && in_array($post_id, $assigned_items[$item_key])) {
 					$assigned_projects[] = array(
-						'name' => esc_html($project->name),
+						'name' => $project->name,
 						'id' => $project->gendoxId
 					);
 				}
 			}
 			if (!empty($assigned_projects)) {
 				foreach ($assigned_projects as $project) {
-					echo '<span class="assigned-project" data-gendoxId="' . $project['id'] . '">' . $project['name'] . '</span><br>';
+					echo '<span class="assigned-project" data-gendoxId="' . esc_attr($project['id']) . '">' . esc_html($project['name']) . '</span><br>';
 				}
 			} else {
 				echo __('-', 'gendox-wp-ai-agent');
@@ -578,8 +578,8 @@ class Gendox_WP_AI_Agent_Run
 ?>
 			<script
 				id="gendox-chat-script"
-				src="<?php echo esc_attr($chat_script_url); ?>/gendox-sdk/gendox-widget-plugin.js"
-				data-gendox-src="<?php echo esc_attr($chat_script_url); ?>"
+				src="<?php echo esc_url(rtrim($chat_script_url, '/') . '/gendox-sdk/gendox-widget-plugin.js'); ?>"
+				data-gendox-src="<?php echo esc_url($chat_script_url); ?>"
 				data-organization-id="<?php echo esc_attr($organization_id); ?>"
 				data-project-id="<?php echo esc_attr($project_id); ?>">
 			</script>

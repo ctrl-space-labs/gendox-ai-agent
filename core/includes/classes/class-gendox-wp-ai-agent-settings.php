@@ -61,6 +61,22 @@ class Gendox_WP_AI_Agent_Settings
 	}
 
 	/**
+	 * Capability check shared by every wp_ajax_gendox_* handler.
+	 *
+	 * The nonce alone only proves the request came from a page we rendered - it says
+	 * nothing about who is allowed to act. Every handler must also check this, since the
+	 * settings menu (and therefore the nonce) is only ever exposed to users who already
+	 * pass this check, but relying on that indirectly would break silently if the menu
+	 * capability ever changed.
+	 *
+	 * @return bool
+	 */
+	private function current_user_can_manage_gendox()
+	{
+		return current_user_can('manage_options');
+	}
+
+	/**
 	 * Moves the integration when the API key points at a different organization.
 	 *
 	 * Deactivates the outgoing organization and activates the incoming one. The key is only
@@ -142,7 +158,7 @@ class Gendox_WP_AI_Agent_Settings
 		add_menu_page(
             __('Gendox AI Chat Settings', 'gendox-wp-ai-agent'),
 			__('Gendox AI Chat', 'gendox-wp-ai-agent'),
-			'edit_posts',
+			'manage_options',
            'gendox-ai-chat-settings',
            array($this, 'settings_page_content'),
            $this->get_menu_icon()
@@ -247,14 +263,14 @@ class Gendox_WP_AI_Agent_Settings
 	public function chat_script_url_field_callback()
 	{
 		$chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL);
-		echo '<input type="url" class="form-control" name="gendox_chat_script_url" value="' . esc_attr($chat_script_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
+		echo '<input type="url" class="form-control" name="gendox_chat_script_url" value="' . esc_url($chat_script_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
 		echo '<p class="description">' . __('The URL where the Gendox chat script is hosted.', 'gendox-wp-ai-agent') . '</p>';
 	}
 
 	public function api_base_url_field_callback()
 	{
 		$api_base_url = get_option('gendox_api_base_url', GENDOX_DEFAULT_URL);
-		echo '<input type="url" class="form-control" name="gendox_api_base_url" value="' . esc_attr($api_base_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
+		echo '<input type="url" class="form-control" name="gendox_api_base_url" value="' . esc_url($api_base_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
 		echo '<p class="description">' . __('The base URL for Gendox API endpoints.', 'gendox-wp-ai-agent') . '</p>';
 	}
 
@@ -301,10 +317,10 @@ class Gendox_WP_AI_Agent_Settings
 		// Both options stay registered under 'gendox_api_settings_group' as well: the hidden
 		// Chat Script Settings page still submits that group, and options.php only accepts
 		// values whitelisted for the group being saved.
-		register_setting('gendox_ai_chat_settings_group', 'gendox_chat_script_url');
-		register_setting('gendox_ai_chat_settings_group', 'gendox_api_base_url');
-		register_setting('gendox_api_settings_group', 'gendox_chat_script_url');
-		register_setting('gendox_api_settings_group', 'gendox_api_base_url');
+		register_setting('gendox_ai_chat_settings_group', 'gendox_chat_script_url', array('sanitize_callback' => 'esc_url_raw'));
+		register_setting('gendox_ai_chat_settings_group', 'gendox_api_base_url', array('sanitize_callback' => 'esc_url_raw'));
+		register_setting('gendox_api_settings_group', 'gendox_chat_script_url', array('sanitize_callback' => 'esc_url_raw'));
+		register_setting('gendox_api_settings_group', 'gendox_api_base_url', array('sanitize_callback' => 'esc_url_raw'));
 		add_settings_section(
 			'gendox_api_main_section',
 			__('API Settings', 'gendox-wp-ai-agent'),
@@ -592,6 +608,10 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		check_ajax_referer('gendox_nonce', 'security');
 
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
+
 		$api_key = isset($_POST['api_key']) ? sanitize_text_field($_POST['api_key']) : '';
 
 		if (empty($api_key)) {
@@ -617,6 +637,10 @@ class Gendox_WP_AI_Agent_Settings
 	public function gendox_fetch_projects()
 	{
 		check_ajax_referer('gendox_nonce', 'security');
+
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
 
 		$api_key = get_option('gendox_ai_chat_api_key');
 		if (empty($api_key)) {
@@ -741,6 +765,10 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		check_ajax_referer('gendox_nonce', 'security');
 
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
+
 		$api_key = get_option('gendox_ai_chat_api_key');
 		if (empty($api_key)) {
 			wp_send_json_error('API Key is missing.');
@@ -826,6 +854,10 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		check_ajax_referer('gendox_nonce', 'security');
 
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
+
 		$posts = get_posts(array(
 			'post_type' => 'post',
 			'numberposts' => -1,
@@ -849,6 +881,10 @@ class Gendox_WP_AI_Agent_Settings
 	public function gendox_fetch_products()
 	{
 		check_ajax_referer('gendox_nonce', 'security');
+
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
 
 		$products = get_posts(array(
 			'post_type' => 'product',
@@ -874,6 +910,10 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		check_ajax_referer('gendox_nonce', 'security');
 
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
+
 		$pages = get_posts(array(
 			'post_type' => 'page',
 			'numberposts' => -1,
@@ -896,6 +936,10 @@ class Gendox_WP_AI_Agent_Settings
 	public function gendox_save_project_changes()
 	{
 		check_ajax_referer('gendox_nonce', 'security');
+
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
 
 		$projectId = isset($_POST['projectId']) ? sanitize_text_field($_POST['projectId']) : '';
 		$assignedPosts = isset($_POST['posts']) ? array_map('intval', $_POST['posts']) : array();
@@ -932,6 +976,10 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		check_ajax_referer('gendox_nonce', 'security');
 
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
+
 		$projectId = isset($_POST['projectId']) ? sanitize_text_field($_POST['projectId']) : '';
 
 		global $wpdb;
@@ -949,6 +997,10 @@ class Gendox_WP_AI_Agent_Settings
 	public function gendox_view_project()
 	{
 		check_ajax_referer('gendox_nonce', 'security');
+
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
 
 		$projectId = isset($_POST['projectId']) ? sanitize_text_field($_POST['projectId']) : '';
 
@@ -996,6 +1048,10 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		check_ajax_referer('gendox_nonce', 'security');
 
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
+
 		// Retrieve selected values from the AJAX request
 		$post_type = isset($_POST['post_type']) ? (array) $_POST['post_type'] : [];
 		$taxonomies = isset($_POST['taxonomies']) ? (array) $_POST['taxonomies'] : [];
@@ -1030,6 +1086,10 @@ class Gendox_WP_AI_Agent_Settings
 	public function gendox_get_chat_settings()
 	{
 		check_ajax_referer('gendox_nonce', 'security');
+
+		if (!$this->current_user_can_manage_gendox()) {
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+		}
 
 		$project_id = isset($_POST['project_id']) ? sanitize_text_field($_POST['project_id']) : '';
 

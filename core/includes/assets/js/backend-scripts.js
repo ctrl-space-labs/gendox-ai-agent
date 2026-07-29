@@ -178,15 +178,12 @@ jQuery(document).ready(function ($) {
     // Preselect the saved items in Select2
     function preselectItems(itemType, selectedItems) {
         //timeout to wait for select2 to initialize
-        console.log('preselecting items');
         var selectElement = '#assign_' + itemType;
-        console.log(selectedItems);
         $(selectElement).val(selectedItems).trigger('change'); // Preselect items in Select2
     }
 
     // Function to load posts, products, and pages via AJAX and populate multi-selects
     function loadItems(itemType, selectElement) {
-        console.log('loading items');
         var deferred = $.Deferred(); // Use deferred to track when data is fully loaded
 
         $.ajax({
@@ -206,7 +203,6 @@ jQuery(document).ready(function ($) {
 
                     // Initialize Select2 after loading items
                     $(selectElement + ' .select2-multi').select2();
-                    console.log(response.data);
                     deferred.resolve(); // Resolve deferred when data is loaded
                 } else {
                     $(selectElement).html('<option>No ' + itemType + ' found</option>').trigger('change');
@@ -227,9 +223,6 @@ jQuery(document).ready(function ($) {
         var selectedPosts = $('#assign_posts').val();
         var selectedProducts = $('#assign_products').val();
         var selectedPages = $('#assign_pages').val();
-        console.log(selectedPosts);
-        console.log(selectedProducts);
-        console.log(selectedPages);
 
         $.ajax({
             url: gendox.ajax_url,
@@ -332,8 +325,6 @@ jQuery(document).ready(function ($) {
             assigned_projects.push($(this).attr('data-gendoxId'));
         });
 
-        console.log("Assigned Projects:", assigned_projects); // Debug: Check the project IDs array
-
         // Uncheck all checkboxes first to reset
         $('input[name="assigned_project[]"]').prop('checked', false);
 
@@ -346,7 +337,6 @@ jQuery(document).ready(function ($) {
     // Hook into the quick edit button click
     $(document).on('click', '.editinline', function () {
         var post_id = $(this).closest('tr').attr('id').replace('post-', '');
-        console.log("Post ID:", post_id); // Debug: Check the post ID
         setQuickEditValues(post_id);
     });
 });
@@ -445,32 +435,6 @@ jQuery(document).ready(function ($) {
     $('#postTypeSelect').select2({
         placeholder: 'Select post type',
         width: '100%'
-    });
-});
-
-jQuery(document).ready(function ($) {
-    $('#generate_wp_api_key').on('click', function () {
-        // Show loading message
-        $('#wp_api_key_message').text('Generating API Key...');
-
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'generate_wp_gendox_api_key'
-            },
-            success: function (response) {
-                if (response.success) {
-                    $('#wp_gendox_api_key').val(response.data); // Set the generated key in the field
-                    $('#wp_api_key_message').text('API Key generated successfully.');
-                } else {
-                    $('#wp_api_key_message').text('Failed to generate API Key.');
-                }
-            },
-            error: function () {
-                $('#wp_api_key_message').text('Error generating API Key.');
-            }
-        });
     });
 });
 

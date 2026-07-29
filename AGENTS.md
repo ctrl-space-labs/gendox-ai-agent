@@ -122,11 +122,6 @@ multisite handling, all of these need addressing together:
 - Options are per-site, so the API key would need configuring on every site — an unmade
   product decision.
 
-Unrelated but adjacent: `gendox_create_projects_table()` passes `CREATE TABLE IF NOT
-EXISTS` to `dbDelta()`, which parses the statement itself and expects plain `CREATE TABLE`.
-Harmless today because the schema hasn't changed since 1.0.0, but schema *upgrades* may
-not apply until that's fixed.
-
 ## Conventions
 
 - Tabs for indentation in PHP, matching the existing files.
@@ -189,7 +184,5 @@ find . -name '*.php' -not -path './.git/*' -exec php -l {} \;
 ## Known issues (unfixed — see readme/publishing notes)
 
 - `add_submenu_page(null, …)` is deprecated on PHP 8.1+.
-- `$_GET['tab']` is used unsanitized in `settings_page_content()`.
-- No `uninstall.php` — options and the `gendox_projects` table are left behind on delete.
 - API key is stored in plaintext in `wp_options` (standard for WP plugins, but the readme's
   external-service disclosure should stay accurate about it).

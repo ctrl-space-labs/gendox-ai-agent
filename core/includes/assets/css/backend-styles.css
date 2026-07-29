@@ -92,10 +92,6 @@ properties to keep future tweaks in one place.
     width: fit-content;
 }
 
-#wp_gendox_api_key {
-    max-width: 400px;
-}
-
 /*----------------- Panels -----------------*/
 /* Each panel groups the fields that one button acts on: the settings panel ends with
    Save Changes, the projects panel with Fetch Projects. Mirrors the framing of WordPress'

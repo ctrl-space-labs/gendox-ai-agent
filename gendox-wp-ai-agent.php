@@ -82,7 +82,7 @@ function gendox_create_projects_table()
 	$charset_collate = $wpdb->get_charset_collate();
 
 	// SQL to create the table
-	$sql = "CREATE TABLE IF NOT EXISTS $table_name (
+	$sql = "CREATE TABLE $table_name (
         id mediumint(9) NOT NULL AUTO_INCREMENT,
 		organizationId varchar(255) NOT NULL,
         gendoxId varchar(255) NOT NULL,

@@ -83,7 +83,7 @@ class Gendox_API_Endpoints
         $stored_api_key = get_option('gendox_ai_chat_api_key');
 
         // Check if the provided API key matches the stored API key
-        if ($api_key && $api_key === $stored_api_key) {
+        if ($api_key && $stored_api_key && hash_equals($stored_api_key, $api_key)) {
             return true;
         }
 
@@ -242,6 +242,3 @@ class Gendox_API_Endpoints
         }
     }
 }
-
-// Initialize the class
-new Gendox_API_Endpoints();
