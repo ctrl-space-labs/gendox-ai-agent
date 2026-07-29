@@ -3,7 +3,7 @@ Contributors: csekas
 Donate link:
 Tags: ai, chatbot, ai agent, ai assistant, customer support
 Requires at least: 5.8
-Tested up to: 7.0.2
+Tested up to: 7.0
 Requires PHP: 7.4
 Stable tag: 1.0.4
 License: GPLv2

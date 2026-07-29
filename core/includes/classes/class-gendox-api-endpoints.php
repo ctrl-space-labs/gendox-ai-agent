@@ -116,8 +116,8 @@ class Gendox_API_Endpoints
 
                     if ($post) {
                         // Format dates with microseconds and 'Z' timezone suffix
-                        $created_at = date("Y-m-d\TH:i:s.u\Z", strtotime($post->post_date_gmt));
-                        $updated_at = date("Y-m-d\TH:i:s.u\Z", strtotime($post->post_modified_gmt));
+                        $created_at = gmdate("Y-m-d\TH:i:s.u\Z", strtotime($post->post_date_gmt));
+                        $updated_at = gmdate("Y-m-d\TH:i:s.u\Z", strtotime($post->post_modified_gmt));
 
                         $formatted_items[$type][] = array(
                             'contentId' => $post->ID,
@@ -206,8 +206,8 @@ class Gendox_API_Endpoints
 
                         if ($post) {
                             // Format dates with microseconds and 'Z' timezone suffix
-                            $created_at = date("Y-m-d\TH:i:s.u\Z", strtotime($post->post_date_gmt));
-                            $updated_at = date("Y-m-d\TH:i:s.u\Z", strtotime($post->post_modified_gmt));
+                            $created_at = gmdate("Y-m-d\TH:i:s.u\Z", strtotime($post->post_date_gmt));
+                            $updated_at = gmdate("Y-m-d\TH:i:s.u\Z", strtotime($post->post_modified_gmt));
 
                             $formatted_items[] = array(
                                 'contentId' => $post->ID,

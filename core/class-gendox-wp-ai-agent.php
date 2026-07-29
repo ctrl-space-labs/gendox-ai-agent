@@ -53,7 +53,7 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 */
 		public function __clone()
 		{
-			_doing_it_wrong(__FUNCTION__, __('You are not allowed to clone this class.', 'gendox-wp-ai-agent'), '1.0.0');
+			_doing_it_wrong(__FUNCTION__, esc_html__('You are not allowed to clone this class.', 'gendox-wp-ai-agent'), '1.0.0');
 		}
 
 		/**
@@ -65,7 +65,7 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 */
 		public function __wakeup()
 		{
-			_doing_it_wrong(__FUNCTION__, __('You are not allowed to unserialize this class.', 'gendox-wp-ai-agent'), '1.0.0');
+			_doing_it_wrong(__FUNCTION__, esc_html__('You are not allowed to unserialize this class.', 'gendox-wp-ai-agent'), '1.0.0');
 		}
 
 		/**
@@ -129,19 +129,8 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 */
 		private function base_hooks()
 		{
-			add_action('plugins_loaded', array(self::$instance, 'load_textdomain'));
-		}
-
-		/**
-		 * Loads the plugin language files.
-		 *
-		 * @access  public
-		 * @since   1.0.0
-		 * @return  void
-		 */
-		public function load_textdomain()
-		{
-			load_plugin_textdomain('gendox-wp-ai-agent', FALSE, dirname(plugin_basename(GENDOX_PLUGIN_FILE)) . '/languages/');
+			// Translations for wordpress.org-hosted plugins are loaded automatically since
+			// WordPress 4.6; load_plugin_textdomain() is no longer required.
 		}
 	}
 

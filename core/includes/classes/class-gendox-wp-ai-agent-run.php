@@ -131,9 +131,9 @@ class Gendox_WP_AI_Agent_Run
 		wp_enqueue_style('gendox-backend-styles', GENDOX_PLUGIN_URL . 'core/includes/assets/css/backend-styles.css', array(), GENDOX_VERSION, 'all');
 		wp_enqueue_script('gendox-backend-scripts', GENDOX_PLUGIN_URL . 'core/includes/assets/js/backend-scripts.js', array(), GENDOX_VERSION, false);
 		wp_localize_script('gendox-backend-scripts', 'gendox', array(
-			'plugin_name'   	=> __(GENDOX_NAME, 'gendox-wp-ai-agent'),
-			'ajax_url' => admin_url('admin-ajax.php'),
-			'nonce' => wp_create_nonce('gendox_nonce')
+			'plugin_name' => GENDOX_NAME,
+			'ajax_url'    => admin_url('admin-ajax.php'),
+			'nonce'       => wp_create_nonce('gendox_nonce'),
 		));
 
 		// enqueue select2 (bundled locally - wordpress.org does not allow loading
@@ -192,9 +192,6 @@ class Gendox_WP_AI_Agent_Run
 		// Check if we're on the Gendox AI Chat settings page
 		$screen = get_current_screen();
 		
-		// Debug: Add screen ID to check what it actually is
-		// error_log('Current screen ID: ' . $screen->id);
-		
 		// Check for both possible screen IDs - main menu page and settings submenu page
 		if ($screen->id === 'settings_page_gendox-ai-chat-settings' || 
 		    $screen->id === 'toplevel_page_gendox-ai-chat-settings' ||
@@ -250,13 +247,12 @@ class Gendox_WP_AI_Agent_Run
 		wp_nonce_field('gendox_project_assignment', 'gendox_project_assignment_nonce');
 		echo '<input type="hidden" name="gendox_project_assignment_submitted" value="1" />';
 
-		echo '<label>' . __('Select Projects:', 'gendox-wp-ai-agent') . '</label><br>';
+		echo '<label>' . esc_html__('Select Projects:', 'gendox-wp-ai-agent') . '</label><br>';
 
 		// Loop through projects and create checkboxes
 		foreach ($projects as $project) {
-			$is_checked = in_array($project->gendoxId, $assigned_projects) ? 'checked' : '';
 			echo '<label>';
-			echo '<input type="checkbox" name="assigned_projects[]" value="' . esc_attr($project->gendoxId) . '" ' . $is_checked . '>';
+			echo '<input type="checkbox" name="assigned_projects[]" value="' . esc_attr($project->gendoxId) . '" ' . checked(in_array($project->gendoxId, $assigned_projects, true), true, false) . '>';
 			echo esc_html($project->name);
 			echo '</label><br>';
 		}
@@ -294,8 +290,9 @@ class Gendox_WP_AI_Agent_Run
 
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'gendox_projects';
-		$assigned_projects = isset($_POST['assigned_projects']) ? (array) $_POST['assigned_projects'] : [];
-		$assigned_projects = array_map('sanitize_text_field', $assigned_projects);
+		$assigned_projects = isset($_POST['assigned_projects'])
+			? array_map('sanitize_text_field', wp_unslash((array) $_POST['assigned_projects']))
+			: array();
 		$all_projects = $wpdb->get_results("SELECT gendoxId, postIds FROM $table_name");
 		$item_key = ($post_type === 'product') ? 'products' : ($post_type === 'page' ? 'pages' : 'posts');
 		$post_id = (int) $post_id;
@@ -362,7 +359,7 @@ class Gendox_WP_AI_Agent_Run
 					echo '<span class="assigned-project" data-gendoxId="' . esc_attr($project['id']) . '">' . esc_html($project['name']) . '</span><br>';
 				}
 			} else {
-				echo __('-', 'gendox-wp-ai-agent');
+				echo esc_html('-');
 			}
 		}
 	}
@@ -377,8 +374,9 @@ class Gendox_WP_AI_Agent_Run
 
 			echo '<fieldset class="inline-edit-col-right">';
 			echo '<div class="inline-edit-col">';
+			wp_nonce_field('gendox_project_quick_edit', 'gendox_project_quick_edit_nonce');
 			echo '<input type="hidden" name="gendox_project_quick_edit_submitted" value="1" />';
-			echo '<label><p class="title"><strong>' . __('Assigned Projects', 'gendox-wp-ai-agent') . '</strong></p><div class="checkbox-group">';
+			echo '<label><p class="title"><strong>' . esc_html__('Assigned Projects', 'gendox-wp-ai-agent') . '</strong></p><div class="checkbox-group">';
 
 			foreach ($projects as $project) {
 				echo '<label class="inline-edit-project-label">';
@@ -408,6 +406,13 @@ class Gendox_WP_AI_Agent_Run
 			return;
 		}
 
+		if (
+			empty($_POST['gendox_project_quick_edit_nonce']) ||
+			!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['gendox_project_quick_edit_nonce'])), 'gendox_project_quick_edit')
+		) {
+			return;
+		}
+
 		$post_type = get_post_type($post_id);
 		if (!in_array($post_type, ['product', 'post', 'page'], true)) {
 			return;
@@ -415,8 +420,9 @@ class Gendox_WP_AI_Agent_Run
 
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'gendox_projects';
-		$assigned_projects = isset($_POST['assigned_projects']) ? (array) $_POST['assigned_projects'] : [];
-		$assigned_projects = array_map('sanitize_text_field', $assigned_projects);
+		$assigned_projects = isset($_POST['assigned_projects'])
+			? array_map('sanitize_text_field', wp_unslash((array) $_POST['assigned_projects']))
+			: array();
 		$all_projects = $wpdb->get_results("SELECT gendoxId, postIds FROM $table_name");
 		$item_key = ($post_type === 'product') ? 'products' : ($post_type === 'page' ? 'pages' : 'posts');
 		$post_id = (int) $post_id;
@@ -459,7 +465,9 @@ class Gendox_WP_AI_Agent_Run
 
 		// Add Assign and Remove actions for each project
 		foreach ($projects as $project) {
+			/* translators: %s: project name */
 			$bulk_actions['assign_to_project_' . $project->gendoxId] = sprintf(__('Assign to Project: %s', 'gendox-wp-ai-agent'), $project->name);
+			/* translators: %s: project name */
 			$bulk_actions['remove_from_project_' . $project->gendoxId] = sprintf(__('Remove from Project: %s', 'gendox-wp-ai-agent'), $project->name);
 		}
 
@@ -472,10 +480,11 @@ class Gendox_WP_AI_Agent_Run
 		$table_name = $wpdb->prefix . 'gendox_projects';
 
 		if (strpos($action, 'assign_to_project_') === 0 || strpos($action, 'remove_from_project_') === 0) {
-			$project_id = (int)str_replace(['assign_to_project_', 'remove_from_project_'], '', $action);
+			// gendoxId is a UUID string, not an integer.
+			$project_id = str_replace(array('assign_to_project_', 'remove_from_project_'), '', $action);
 			$is_assign_action = strpos($action, 'assign_to_project_') === 0;
 
-			$project = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE gendoxId = %d", $project_id));
+			$project = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE gendoxId = %s", $project_id));
 			if ($project) {
 				$assigned_items = maybe_unserialize($project->postIds) ?: ['products' => [], 'posts' => [], 'pages' => []];
 
@@ -503,7 +512,7 @@ class Gendox_WP_AI_Agent_Run
 					['postIds' => maybe_serialize($assigned_items)],
 					['gendoxId' => $project_id],
 					['%s'],
-					['%d']
+					['%s']
 				);
 			}
 
@@ -516,11 +525,13 @@ class Gendox_WP_AI_Agent_Run
 	public function custom_bulk_action_admin_notice()
 	{
 		if (!empty($_REQUEST['bulk_assigned_to_project'])) {
-			$count = intval($_REQUEST['bulk_assigned_to_project']);
-			$screen = get_current_screen();
-			$post_type = $screen->post_type;
+			$count = absint(wp_unslash($_REQUEST['bulk_assigned_to_project']));
+			/* translators: %s: number of items updated */
 			$message = _n('%s item updated.', '%s items updated.', $count, 'gendox-wp-ai-agent');
-			printf('<div id="message" class="updated notice is-dismissible"><p>' . sprintf($message, $count) . '</p></div>');
+			printf(
+				'<div id="message" class="updated notice is-dismissible"><p>%s</p></div>',
+				esc_html(sprintf($message, $count))
+			);
 		}
 	}
 
