@@ -1,0 +1,9 @@
+# Files excluded from the wordpress.org / release zip.
+# Keep these in git; do not ship them to end users.
+.git
+.gitignore
+.distignore
+.idea
+.DS_Store
+**/.DS_Store
+AGENTS.md
