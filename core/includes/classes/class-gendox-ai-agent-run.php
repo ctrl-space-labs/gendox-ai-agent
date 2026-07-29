@@ -4,20 +4,20 @@
 if (! defined('ABSPATH')) exit;
 
 /**
- * Class Gendox_WP_AI_Agent_Run
+ * Class Gendox_AI_Agent_Run
  *
  * Thats where we bring the plugin to life
  *
  * @package		GENDOX
- * @subpackage	Classes/Gendox_WP_AI_Agent_Run
+ * @subpackage	Classes/Gendox_AI_Agent_Run
  * @author		Ctrl+Space Labs
  * @since		1.0.0
  */
-class Gendox_WP_AI_Agent_Run
+class Gendox_AI_Agent_Run
 {
 
 	/**
-	 * Our Gendox_WP_AI_Agent_Run constructor 
+	 * Our Gendox_AI_Agent_Run constructor 
 	 * to run the plugin logic.
 	 *
 	 * @since 1.0.0
@@ -101,15 +101,14 @@ class Gendox_WP_AI_Agent_Run
 	 */
 	public function add_plugin_action_link($links)
 	{
-		// Add the custom settings link
+		// Top-level menu (add_menu_page), not under Settings → options-general.php.
 		$settings_link = sprintf(
 			'<a href="%s" title="%s">%s</a>',
-			admin_url('options-general.php?page=gendox-ai-chat-settings'),
-			__('Settings', 'gendox-wp-ai-agent'),
-			__('Settings', 'gendox-wp-ai-agent')
+			admin_url('admin.php?page=gendox-ai-chat-settings'),
+			__('Settings', 'gendox-ai-agent'),
+			__('Settings', 'gendox-ai-agent')
 		);
 
-		// Add it to the links array
 		array_unshift($links, $settings_link);
 
 		return $links;
@@ -154,36 +153,16 @@ class Gendox_WP_AI_Agent_Run
 	 */
 	public function add_admin_bar_menu_items($admin_bar)
 	{
-		// Main menu item
+		// Single settings page (no tabs). Top-level menu → admin.php, not options-general.php.
 		$admin_bar->add_menu(array(
-			'id'    => 'gendox-wp-ai-agent-id',
-			'title' => __('Gendox AI Chat Settings', 'gendox-wp-ai-agent'),
-			'href'  => admin_url('options-general.php?page=gendox-ai-chat-settings'), // Link to the main settings page
+			'id'    => 'gendox-ai-agent-id',
+			'title' => __('Gendox AI Chat Settings', 'gendox-ai-agent'),
+			'href'  => admin_url('admin.php?page=gendox-ai-chat-settings'),
 			'meta'  => array(
-				'title' => __('Gendox AI Chat Settings', 'gendox-wp-ai-agent'),
-				'class' => 'gendox-wp-ai-agent-class',
+				'title' => __('Gendox AI Chat Settings', 'gendox-ai-agent'),
+				'class' => 'gendox-ai-agent-class',
 			),
 		));
-
-		// Sub-menu items for each tab
-		$tabs = [
-			'ai-chat-settings' => __('AI Chat Settings', 'gendox-wp-ai-agent'),
-			'wp-settings'      => __('WordPress Settings', 'gendox-wp-ai-agent'),
-			'api-settings'     => __('API Settings', 'gendox-wp-ai-agent'),
-		];
-
-		foreach ($tabs as $tab_id => $tab_title) {
-			$admin_bar->add_menu(array(
-				'id'     => 'gendox-wp-ai-agent-' . $tab_id,
-				'title'  => $tab_title,
-				'parent' => 'gendox-wp-ai-agent-id',
-				'href'   => admin_url('options-general.php?page=gendox-ai-chat-settings&tab=' . $tab_id), // Link to each tab
-				'meta'   => array(
-					'title' => $tab_title,
-					'class' => 'gendox-wp-ai-agent-sub-class',
-				),
-			));
-		}
 	}
 
 
@@ -192,9 +171,8 @@ class Gendox_WP_AI_Agent_Run
 		// Check if we're on the Gendox AI Chat settings page
 		$screen = get_current_screen();
 		
-		// Check for both possible screen IDs - main menu page and settings submenu page
-		if ($screen->id === 'settings_page_gendox-ai-chat-settings' || 
-		    $screen->id === 'toplevel_page_gendox-ai-chat-settings' ||
+		// Top-level menu page (add_menu_page).
+		if ($screen->id === 'toplevel_page_gendox-ai-chat-settings' ||
 		    strpos($screen->id, 'gendox-ai-chat-settings') !== false) {
 			// Enqueue Bootstrap only on this page. Bundled locally - wordpress.org does
 			// not allow loading executable assets from third-party CDNs.
@@ -210,7 +188,7 @@ class Gendox_WP_AI_Agent_Run
 		foreach ($post_types as $post_type) {
 			add_meta_box(
 				'project_assignment_metabox',
-				__('Assign Project', 'gendox-wp-ai-agent'),
+				__('Assign Project', 'gendox-ai-agent'),
 				array($this, 'render_project_metabox'),
 				$post_type,
 				'side',
@@ -247,7 +225,7 @@ class Gendox_WP_AI_Agent_Run
 		wp_nonce_field('gendox_project_assignment', 'gendox_project_assignment_nonce');
 		echo '<input type="hidden" name="gendox_project_assignment_submitted" value="1" />';
 
-		echo '<label>' . esc_html__('Select Projects:', 'gendox-wp-ai-agent') . '</label><br>';
+		echo '<label>' . esc_html__('Select Projects:', 'gendox-ai-agent') . '</label><br>';
 
 		// Loop through projects and create checkboxes
 		foreach ($projects as $project) {
@@ -330,7 +308,7 @@ class Gendox_WP_AI_Agent_Run
 	// 2. Add Project Assignment in Quick Edit
 	public function add_project_column($columns)
 	{
-		$columns['assigned_project'] = __('Assigned Project', 'gendox-wp-ai-agent');
+		$columns['assigned_project'] = __('Assigned Project', 'gendox-ai-agent');
 		return $columns;
 	}
 
@@ -376,7 +354,7 @@ class Gendox_WP_AI_Agent_Run
 			echo '<div class="inline-edit-col">';
 			wp_nonce_field('gendox_project_quick_edit', 'gendox_project_quick_edit_nonce');
 			echo '<input type="hidden" name="gendox_project_quick_edit_submitted" value="1" />';
-			echo '<label><p class="title"><strong>' . esc_html__('Assigned Projects', 'gendox-wp-ai-agent') . '</strong></p><div class="checkbox-group">';
+			echo '<label><p class="title"><strong>' . esc_html__('Assigned Projects', 'gendox-ai-agent') . '</strong></p><div class="checkbox-group">';
 
 			foreach ($projects as $project) {
 				echo '<label class="inline-edit-project-label">';
@@ -466,9 +444,9 @@ class Gendox_WP_AI_Agent_Run
 		// Add Assign and Remove actions for each project
 		foreach ($projects as $project) {
 			/* translators: %s: project name */
-			$bulk_actions['assign_to_project_' . $project->gendoxId] = sprintf(__('Assign to Project: %s', 'gendox-wp-ai-agent'), $project->name);
+			$bulk_actions['assign_to_project_' . $project->gendoxId] = sprintf(__('Assign to Project: %s', 'gendox-ai-agent'), $project->name);
 			/* translators: %s: project name */
-			$bulk_actions['remove_from_project_' . $project->gendoxId] = sprintf(__('Remove from Project: %s', 'gendox-wp-ai-agent'), $project->name);
+			$bulk_actions['remove_from_project_' . $project->gendoxId] = sprintf(__('Remove from Project: %s', 'gendox-ai-agent'), $project->name);
 		}
 
 		return $bulk_actions;
@@ -527,7 +505,7 @@ class Gendox_WP_AI_Agent_Run
 		if (!empty($_REQUEST['bulk_assigned_to_project'])) {
 			$count = absint(wp_unslash($_REQUEST['bulk_assigned_to_project']));
 			/* translators: %s: number of items updated */
-			$message = _n('%s item updated.', '%s items updated.', $count, 'gendox-wp-ai-agent');
+			$message = _n('%s item updated.', '%s items updated.', $count, 'gendox-ai-agent');
 			printf(
 				'<div id="message" class="updated notice is-dismissible"><p>%s</p></div>',
 				esc_html(sprintf($message, $count))
@@ -586,7 +564,7 @@ class Gendox_WP_AI_Agent_Run
 				$organization_id = $project->organizationId;
 			}
 			$chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL);
-			$widget_options  = Gendox_WP_AI_Agent_Helpers::get_widget_script_options();
+			$widget_options  = Gendox_AI_Agent_Helpers::get_widget_script_options();
 ?>
 			<script
 				id="gendox-chat-script"

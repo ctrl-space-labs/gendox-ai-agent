@@ -1,4 +1,4 @@
-=== Gendox WP AI Agent ===
+=== Gendox AI Agent ===
 Contributors: csekas
 Donate link:
 Tags: ai, chatbot, ai agent, ai assistant, customer support
@@ -9,11 +9,11 @@ Stable tag: 1.0.4
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add an AI chat agent to your site, trained on your own posts, pages and products. Answers customer questions 24/7 using your real content.
+AI assistant for WordPress websites. Train a chat agent on your posts, pages and products — answers customer questions 24/7 from your real content.
 
 == Description ==
 
-**Gendox WP AI Agent** turns your existing content into an AI assistant your visitors can
+**Gendox AI Agent** turns your existing content into an AI assistant your visitors can
 talk to. The agent is trained on the posts, pages and WooCommerce products *you* choose —
 so it answers from your own material, not the open internet.
 
@@ -65,7 +65,7 @@ API key and explicitly assign content to a project.
 
 1. Go to `Plugins` in the Admin menu
 2. Click on the button `Add new`
-3. Search for `Gendox WP AI Agent` and click 'Install Now', or use the `upload` link to upload the plugin zip
+3. Search for `Gendox AI Agent` and click 'Install Now', or use the `upload` link to upload the plugin zip
 4. Click on `Activate plugin`
 5. Open **Gendox AI Chat** in the admin menu and paste your Gendox API key, then click **Test Connection**
 6. On the **WordPress Settings** tab, click **Fetch Projects**, then use **Assign Content** and **Assign Chat**

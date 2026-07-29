@@ -2,17 +2,17 @@
 
 // Exit if accessed directly.
 if (! defined('ABSPATH')) exit;
-if (! class_exists('Gendox_WP_AI_Agent')) :
+if (! class_exists('Gendox_AI_Agent')) :
 
 	/**
-	 * Main Gendox_WP_AI_Agent Class.
+	 * Main Gendox_AI_Agent Class.
 	 *
 	 * @package		GENDOX
-	 * @subpackage	Classes/Gendox_WP_AI_Agent
+	 * @subpackage	Classes/Gendox_AI_Agent
 	 * @since		1.0.0
 	 * @author		Ctrl+Space Labs
 	 */
-	final class Gendox_WP_AI_Agent
+	final class Gendox_AI_Agent
 	{
 
 		/**
@@ -20,7 +20,7 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 *
 		 * @access	private
 		 * @since	1.0.0
-		 * @var		object|Gendox_WP_AI_Agent
+		 * @var		object|Gendox_AI_Agent
 		 */
 		private static $instance;
 
@@ -29,7 +29,7 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 *
 		 * @access	public
 		 * @since	1.0.0
-		 * @var		object|Gendox_WP_AI_Agent_Helpers
+		 * @var		object|Gendox_AI_Agent_Helpers
 		 */
 		public $helpers;
 
@@ -38,7 +38,7 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 *
 		 * @access	public
 		 * @since	1.0.0
-		 * @var		object|Gendox_WP_AI_Agent_Settings
+		 * @var		object|Gendox_AI_Agent_Settings
 		 */
 		public $settings;
 
@@ -53,7 +53,7 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 */
 		public function __clone()
 		{
-			_doing_it_wrong(__FUNCTION__, esc_html__('You are not allowed to clone this class.', 'gendox-wp-ai-agent'), '1.0.0');
+			_doing_it_wrong(__FUNCTION__, esc_html__('You are not allowed to clone this class.', 'gendox-ai-agent'), '1.0.0');
 		}
 
 		/**
@@ -65,31 +65,31 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 */
 		public function __wakeup()
 		{
-			_doing_it_wrong(__FUNCTION__, esc_html__('You are not allowed to unserialize this class.', 'gendox-wp-ai-agent'), '1.0.0');
+			_doing_it_wrong(__FUNCTION__, esc_html__('You are not allowed to unserialize this class.', 'gendox-ai-agent'), '1.0.0');
 		}
 
 		/**
-		 * Main Gendox_WP_AI_Agent Instance.
+		 * Main Gendox_AI_Agent Instance.
 		 *
-		 * Insures that only one instance of Gendox_WP_AI_Agent exists in memory at any one
+		 * Insures that only one instance of Gendox_AI_Agent exists in memory at any one
 		 * time. Also prevents needing to define globals all over the place.
 		 *
 		 * @access		public
 		 * @since		1.0.0
 		 * @static
-		 * @return		object|Gendox_WP_AI_Agent	The one true Gendox_WP_AI_Agent
+		 * @return		object|Gendox_AI_Agent	The one true Gendox_AI_Agent
 		 */
 		public static function instance()
 		{
-			if (! isset(self::$instance) && ! (self::$instance instanceof Gendox_WP_AI_Agent)) {
-				self::$instance					= new Gendox_WP_AI_Agent;
+			if (! isset(self::$instance) && ! (self::$instance instanceof Gendox_AI_Agent)) {
+				self::$instance					= new Gendox_AI_Agent;
 				self::$instance->base_hooks();
 				self::$instance->includes();
-				self::$instance->helpers		= new Gendox_WP_AI_Agent_Helpers();
-				self::$instance->settings		= new Gendox_WP_AI_Agent_Settings();
+				self::$instance->helpers		= new Gendox_AI_Agent_Helpers();
+				self::$instance->settings		= new Gendox_AI_Agent_Settings();
 
 				//Fire the plugin logic
-				new Gendox_WP_AI_Agent_Run();
+				new Gendox_AI_Agent_Run();
 
 				//Load the api endpoints
 				new Gendox_API_Endpoints();
@@ -113,10 +113,10 @@ if (! class_exists('Gendox_WP_AI_Agent')) :
 		 */
 		private function includes()
 		{
-			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-wp-ai-agent-helpers.php';
-			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-wp-ai-agent-settings.php';
+			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-ai-agent-helpers.php';
+			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-ai-agent-settings.php';
 
-			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-wp-ai-agent-run.php';
+			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-ai-agent-run.php';
 			require_once GENDOX_PLUGIN_DIR . 'core/includes/classes/class-gendox-api-endpoints.php';
 		}
 

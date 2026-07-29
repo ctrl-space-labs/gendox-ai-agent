@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Gendox WP AI Agent
+ * Gendox AI Agent
  *
  * @package       GENDOX
  * @author        Ctrl+Space Labs
@@ -9,13 +9,13 @@
  * @version       1.0.4
  *
  * @wordpress-plugin
- * Plugin Name:   Gendox WP AI Agent
+ * Plugin Name:   Gendox AI Agent
  * Plugin URI:    https://gendox.dev
- * Description:   Add an AI chat agent to your site, trained on your own posts, pages and products.
+ * Description:   AI assistant for WordPress websites. Train a chat agent on your posts, pages and products.
  * Version:       1.0.4
  * Author:        Ctrl+Space Labs
  * Author URI:    https://www.ctrlspace.dev/
- * Text Domain:   gendox-wp-ai-agent
+ * Text Domain:   gendox-ai-agent
  * Domain Path:   /languages
  * License:       GPLv2
  * License URI:   https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,7 +25,7 @@
 if (! defined('ABSPATH')) exit;
 
 // Plugin name
-define('GENDOX_NAME', 'Gendox WP AI Agent');
+define('GENDOX_NAME', 'Gendox AI Agent');
 
 // Plugin version
 define('GENDOX_VERSION', '1.0.4');
@@ -49,7 +49,7 @@ define('GENDOX_PLUGIN_URL', plugin_dir_url(GENDOX_PLUGIN_FILE));
 /**
  * Load the main class for the core functionality
  */
-require_once GENDOX_PLUGIN_DIR . 'core/class-gendox-wp-ai-agent.php';
+require_once GENDOX_PLUGIN_DIR . 'core/class-gendox-ai-agent.php';
 
 /**
  * The main function to load the only instance
@@ -57,11 +57,11 @@ require_once GENDOX_PLUGIN_DIR . 'core/class-gendox-wp-ai-agent.php';
  *
  * @author  Ctrl+Space Labs
  * @since   1.0.0
- * @return  object|Gendox_WP_AI_Agent
+ * @return  object|Gendox_AI_Agent
  */
 function GENDOX()
 {
-	return Gendox_WP_AI_Agent::instance();
+	return Gendox_AI_Agent::instance();
 }
 
 GENDOX();
@@ -100,9 +100,9 @@ register_activation_hook(__FILE__, 'gendox_activate_plugin');
 register_deactivation_hook(__FILE__, 'gendox_deactivate_plugin');
 
 function gendox_activate_plugin() {
-    Gendox_WP_AI_Agent_Helpers::update_integration_status('ACTIVE');
+    Gendox_AI_Agent_Helpers::update_integration_status('ACTIVE');
 }
 
 function gendox_deactivate_plugin() {
-    Gendox_WP_AI_Agent_Helpers::update_integration_status('INACTIVE');
+    Gendox_AI_Agent_Helpers::update_integration_status('INACTIVE');
 }

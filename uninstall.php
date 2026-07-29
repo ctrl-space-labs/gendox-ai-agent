@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall Gendox WP AI Agent.
+ * Uninstall Gendox AI Agent.
  *
  * Runs on plugin deletion only. No plugin code, constant or class is loaded here.
  *

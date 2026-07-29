@@ -4,17 +4,17 @@
 if (! defined('ABSPATH')) exit;
 
 /**
- * Class Gendox_WP_AI_Agent_Settings
+ * Class Gendox_AI_Agent_Settings
  *
  * This class contains all of the plugin settings.
  * Here you can configure the whole plugin data.
  *
  * @package		GENDOX
- * @subpackage	Classes/Gendox_WP_AI_Agent_Settings
+ * @subpackage	Classes/Gendox_AI_Agent_Settings
  * @author		Ctrl+Space Labs
  * @since		1.0.0
  */
-class Gendox_WP_AI_Agent_Settings
+class Gendox_AI_Agent_Settings
 {
 
 	/**
@@ -26,7 +26,7 @@ class Gendox_WP_AI_Agent_Settings
 	private $plugin_name;
 
 	/**
-	 * Our Gendox_WP_AI_Agent_Settings constructor 
+	 * Our Gendox_AI_Agent_Settings constructor 
 	 * to run the plugin logic.
 	 *
 	 * @since 1.0.0
@@ -98,49 +98,49 @@ class Gendox_WP_AI_Agent_Settings
 		// Clearing the key: deactivate the current integration, but never block the save.
 		if (empty($new_value)) {
 			if (!empty($old_value)) {
-				$old_organization_id = Gendox_WP_AI_Agent_Helpers::get_organization_id($old_value);
+				$old_organization_id = Gendox_AI_Agent_Helpers::get_organization_id($old_value);
 				if ($old_organization_id) {
-					Gendox_WP_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE');
+					Gendox_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE');
 				}
 			}
 			return $new_value;
 		}
 
-		$new_organization_id = Gendox_WP_AI_Agent_Helpers::get_organization_id($new_value);
+		$new_organization_id = Gendox_AI_Agent_Helpers::get_organization_id($new_value);
 		if (!$new_organization_id) {
 			add_settings_error(
 				'gendox_ai_chat_api_key',
 				'gendox_api_key_invalid',
-				__('The API key was not accepted by Gendox. The previous key has been kept.', 'gendox-wp-ai-agent')
+				__('The API key was not accepted by Gendox. The previous key has been kept.', 'gendox-ai-agent')
 			);
 			return $old_value;
 		}
 
 		$old_organization_id = empty($old_value)
 			? null
-			: Gendox_WP_AI_Agent_Helpers::get_organization_id($old_value);
+			: Gendox_AI_Agent_Helpers::get_organization_id($old_value);
 
 		// Same organization, or no previous integration to move.
 		if (!$old_organization_id || $old_organization_id === $new_organization_id) {
 			return $new_value;
 		}
 
-		if (!Gendox_WP_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE')) {
+		if (!Gendox_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE')) {
 			add_settings_error(
 				'gendox_ai_chat_api_key',
 				'gendox_deactivate_failed',
-				__('Could not deactivate the integration for the current organization. The API key has not been changed.', 'gendox-wp-ai-agent')
+				__('Could not deactivate the integration for the current organization. The API key has not been changed.', 'gendox-ai-agent')
 			);
 			return $old_value;
 		}
 
-		if (!Gendox_WP_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE')) {
+		if (!Gendox_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE')) {
 			// Put the outgoing organization back, so a failed switch leaves nothing deactivated.
-			Gendox_WP_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'ACTIVE');
+			Gendox_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'ACTIVE');
 			add_settings_error(
 				'gendox_ai_chat_api_key',
 				'gendox_activate_failed',
-				__('Could not activate the integration for the new organization. The API key has not been changed.', 'gendox-wp-ai-agent')
+				__('Could not activate the integration for the new organization. The API key has not been changed.', 'gendox-ai-agent')
 			);
 			return $old_value;
 		}
@@ -156,8 +156,8 @@ class Gendox_WP_AI_Agent_Settings
 	public function add_settings_page()
 	{
 		add_menu_page(
-            __('Gendox AI Chat Settings', 'gendox-wp-ai-agent'),
-			__('Gendox AI Chat', 'gendox-wp-ai-agent'),
+            __('Gendox AI Chat Settings', 'gendox-ai-agent'),
+			__('Gendox AI Chat', 'gendox-ai-agent'),
 			'manage_options',
            'gendox-ai-chat-settings',
            array($this, 'settings_page_content'),
@@ -216,7 +216,7 @@ class Gendox_WP_AI_Agent_Settings
 		// Output the page content
 ?>
 		<div class="wrap">
-			<h1><?php esc_html_e('Chat Script Settings', 'gendox-wp-ai-agent'); ?></h1>
+			<h1><?php esc_html_e('Chat Script Settings', 'gendox-ai-agent'); ?></h1>
 			<form method="post" action="options.php">
 				<?php
 				// Same options group as the visible API Settings tab, so both places
@@ -239,20 +239,20 @@ class Gendox_WP_AI_Agent_Settings
 		// the one group instead of a second, separate one.
 		add_settings_section(
 			'chat_script_main_section',
-			__('Chat Script Settings', 'gendox-wp-ai-agent'),
+			__('Chat Script Settings', 'gendox-ai-agent'),
 			null,
 			'chat-script-settings'
 		);
 		add_settings_field(
 			'gendox_chat_script_url',
-			__('Chat Script URL', 'gendox-wp-ai-agent'),
+			__('Chat Script URL', 'gendox-ai-agent'),
 			array($this, 'chat_script_url_field_callback'),
 			'chat-script-settings',
 			'chat_script_main_section'
 		);
 		add_settings_field(
 			'gendox_api_base_url',
-			__('Gendox API Base URL', 'gendox-wp-ai-agent'),
+			__('Gendox API Base URL', 'gendox-ai-agent'),
 			array($this, 'api_base_url_field_callback'),
 			'chat-script-settings',
 			'chat_script_main_section'
@@ -260,7 +260,7 @@ class Gendox_WP_AI_Agent_Settings
 
 		add_settings_section(
 			'chat_script_widget_section',
-			__('Widget Options', 'gendox-wp-ai-agent'),
+			__('Widget Options', 'gendox-ai-agent'),
 			array($this, 'widget_options_section_callback'),
 			'chat-script-settings'
 		);
@@ -272,24 +272,24 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		$chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL);
 		echo '<input type="url" class="form-control" name="gendox_chat_script_url" value="' . esc_url($chat_script_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
-		echo '<p class="description">' . esc_html__('The URL where the Gendox chat script is hosted.', 'gendox-wp-ai-agent') . '</p>';
+		echo '<p class="description">' . esc_html__('The URL where the Gendox chat script is hosted.', 'gendox-ai-agent') . '</p>';
 	}
 
 	public function api_base_url_field_callback()
 	{
 		$api_base_url = get_option('gendox_api_base_url', GENDOX_DEFAULT_URL);
 		echo '<input type="url" class="form-control" name="gendox_api_base_url" value="' . esc_url($api_base_url) . '" placeholder="' . esc_attr(GENDOX_DEFAULT_URL) . '" />';
-		echo '<p class="description">' . esc_html__('The base URL for Gendox API endpoints.', 'gendox-wp-ai-agent') . '</p>';
+		echo '<p class="description">' . esc_html__('The base URL for Gendox API endpoints.', 'gendox-ai-agent') . '</p>';
 	}
 
 	public function api_settings_section_callback()
 	{
-		echo '<p>' . esc_html__('Configure API endpoints and URLs for the Gendox service.', 'gendox-wp-ai-agent') . '</p>';
+		echo '<p>' . esc_html__('Configure API endpoints and URLs for the Gendox service.', 'gendox-ai-agent') . '</p>';
 	}
 
 	public function widget_options_section_callback()
 	{
-		echo '<p>' . esc_html__('Controls emitted as data-* attributes on the public chat widget script.', 'gendox-wp-ai-agent') . '</p>';
+		echo '<p>' . esc_html__('Controls emitted as data-* attributes on the public chat widget script.', 'gendox-ai-agent') . '</p>';
 	}
 
 	/**
@@ -306,35 +306,35 @@ class Gendox_WP_AI_Agent_Settings
 	{
 		add_settings_field(
 			'gendox_chat_initial_state',
-			__('Initial Chat State', 'gendox-wp-ai-agent'),
+			__('Initial Chat State', 'gendox-ai-agent'),
 			array($this, 'chat_initial_state_field_callback'),
 			$page,
 			$section
 		);
 		add_settings_field(
 			'gendox_local_context_selected_text_enabled',
-			__('Selected Text Context', 'gendox-wp-ai-agent'),
+			__('Selected Text Context', 'gendox-ai-agent'),
 			array($this, 'local_context_selected_text_field_callback'),
 			$page,
 			$section
 		);
 		add_settings_field(
 			'gendox_open_web_page_tool_enabled',
-			__('Open Web Page Tool', 'gendox-wp-ai-agent'),
+			__('Open Web Page Tool', 'gendox-ai-agent'),
 			array($this, 'open_web_page_tool_field_callback'),
 			$page,
 			$section
 		);
 		add_settings_field(
 			'gendox_local_context_max_responses',
-			__('Local Context Max Responses', 'gendox-wp-ai-agent'),
+			__('Local Context Max Responses', 'gendox-ai-agent'),
 			array($this, 'local_context_max_responses_field_callback'),
 			$page,
 			$section
 		);
 		add_settings_field(
 			'gendox_local_context_max_wait_ms',
-			__('Local Context Max Wait (ms)', 'gendox-wp-ai-agent'),
+			__('Local Context Max Wait (ms)', 'gendox-ai-agent'),
 			array($this, 'local_context_max_wait_ms_field_callback'),
 			$page,
 			$section
@@ -409,50 +409,50 @@ class Gendox_WP_AI_Agent_Settings
 
 	public function chat_initial_state_field_callback()
 	{
-		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$defaults = Gendox_AI_Agent_Helpers::get_widget_script_defaults();
 		$value = get_option('gendox_chat_initial_state', $defaults['gendox_chat_initial_state']);
 		echo '<select class="form-control" name="gendox_chat_initial_state">';
-		echo '<option value="closed"' . selected($value, 'closed', false) . '>' . esc_html__('Closed', 'gendox-wp-ai-agent') . '</option>';
-		echo '<option value="open"' . selected($value, 'open', false) . '>' . esc_html__('Open', 'gendox-wp-ai-agent') . '</option>';
+		echo '<option value="closed"' . selected($value, 'closed', false) . '>' . esc_html__('Closed', 'gendox-ai-agent') . '</option>';
+		echo '<option value="open"' . selected($value, 'open', false) . '>' . esc_html__('Open', 'gendox-ai-agent') . '</option>';
 		echo '</select>';
-		echo '<p class="description">' . esc_html__('Whether the chat widget starts open or closed on page load.', 'gendox-wp-ai-agent') . '</p>';
+		echo '<p class="description">' . esc_html__('Whether the chat widget starts open or closed on page load.', 'gendox-ai-agent') . '</p>';
 	}
 
 	public function local_context_selected_text_field_callback()
 	{
-		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$defaults = Gendox_AI_Agent_Helpers::get_widget_script_defaults();
 		$value = get_option('gendox_local_context_selected_text_enabled', $defaults['gendox_local_context_selected_text_enabled']);
 		// Hidden field so an unchecked box still posts "false" (Settings API skips missing keys).
 		echo '<input type="hidden" name="gendox_local_context_selected_text_enabled" value="false" />';
 		echo '<label><input type="checkbox" name="gendox_local_context_selected_text_enabled" value="true"' . checked($value, 'true', false) . ' /> ';
-		echo esc_html__('Enable selected-text local context', 'gendox-wp-ai-agent') . '</label>';
-		echo '<p class="description">' . esc_html__('Allow the widget to use text the visitor has selected on the page as context.', 'gendox-wp-ai-agent') . '</p>';
+		echo esc_html__('Enable selected-text local context', 'gendox-ai-agent') . '</label>';
+		echo '<p class="description">' . esc_html__('Allow the widget to use text the visitor has selected on the page as context.', 'gendox-ai-agent') . '</p>';
 	}
 
 	public function open_web_page_tool_field_callback()
 	{
-		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$defaults = Gendox_AI_Agent_Helpers::get_widget_script_defaults();
 		$value = get_option('gendox_open_web_page_tool_enabled', $defaults['gendox_open_web_page_tool_enabled']);
 		echo '<input type="hidden" name="gendox_open_web_page_tool_enabled" value="false" />';
 		echo '<label><input type="checkbox" name="gendox_open_web_page_tool_enabled" value="true"' . checked($value, 'true', false) . ' /> ';
-		echo esc_html__('Enable open-web-page tool', 'gendox-wp-ai-agent') . '</label>';
-		echo '<p class="description">' . esc_html__('Allow the agent to open web pages as a tool during chat.', 'gendox-wp-ai-agent') . '</p>';
+		echo esc_html__('Enable open-web-page tool', 'gendox-ai-agent') . '</label>';
+		echo '<p class="description">' . esc_html__('Allow the agent to open web pages as a tool during chat.', 'gendox-ai-agent') . '</p>';
 	}
 
 	public function local_context_max_responses_field_callback()
 	{
-		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$defaults = Gendox_AI_Agent_Helpers::get_widget_script_defaults();
 		$value = get_option('gendox_local_context_max_responses', $defaults['gendox_local_context_max_responses']);
 		echo '<input type="number" class="form-control" name="gendox_local_context_max_responses" value="' . esc_attr($value) . '" min="1" step="1" />';
-		echo '<p class="description">' . esc_html__('Maximum number of local-context responses the widget will collect.', 'gendox-wp-ai-agent') . '</p>';
+		echo '<p class="description">' . esc_html__('Maximum number of local-context responses the widget will collect.', 'gendox-ai-agent') . '</p>';
 	}
 
 	public function local_context_max_wait_ms_field_callback()
 	{
-		$defaults = Gendox_WP_AI_Agent_Helpers::get_widget_script_defaults();
+		$defaults = Gendox_AI_Agent_Helpers::get_widget_script_defaults();
 		$value = get_option('gendox_local_context_max_wait_ms', $defaults['gendox_local_context_max_wait_ms']);
 		echo '<input type="number" class="form-control" name="gendox_local_context_max_wait_ms" value="' . esc_attr($value) . '" min="1" step="1" />';
-		echo '<p class="description">' . esc_html__('How long (in milliseconds) to wait for local-context responses.', 'gendox-wp-ai-agent') . '</p>';
+		echo '<p class="description">' . esc_html__('How long (in milliseconds) to wait for local-context responses.', 'gendox-ai-agent') . '</p>';
 	}
 
 	/**
@@ -474,13 +474,13 @@ class Gendox_WP_AI_Agent_Settings
 		);
 		add_settings_section(
 			'gendox_ai_chat_main_section',
-			__('AI Chat Settings', 'gendox-wp-ai-agent'),
+			__('AI Chat Settings', 'gendox-ai-agent'),
 			null,
 			'gendox-ai-chat-settings'
 		);
 		add_settings_field(
 			'gendox_ai_chat_api_key',
-			__('API Key', 'gendox-wp-ai-agent'),
+			__('API Key', 'gendox-ai-agent'),
 			array($this, 'api_key_field_callback'),
 			'gendox-ai-chat-settings',
 			'gendox_ai_chat_main_section'
@@ -507,20 +507,20 @@ class Gendox_WP_AI_Agent_Settings
 		register_setting('gendox_api_settings_group', 'gendox_api_base_url', array('sanitize_callback' => 'esc_url_raw'));
 		add_settings_section(
 			'gendox_api_main_section',
-			__('API Settings', 'gendox-wp-ai-agent'),
+			__('API Settings', 'gendox-ai-agent'),
 			array($this, 'api_settings_section_callback'),
 			'gendox-ai-chat-settings'
 		);
 		add_settings_field(
 			'gendox_chat_script_url',
-			__('Chat Script URL', 'gendox-wp-ai-agent'),
+			__('Chat Script URL', 'gendox-ai-agent'),
 			array($this, 'chat_script_url_field_callback'),
 			'gendox-ai-chat-settings',
 			'gendox_api_main_section'
 		);
 		add_settings_field(
 			'gendox_api_base_url',
-			__('Gendox API Base URL', 'gendox-wp-ai-agent'),
+			__('Gendox API Base URL', 'gendox-ai-agent'),
 			array($this, 'api_base_url_field_callback'),
 			'gendox-ai-chat-settings',
 			'gendox_api_main_section'
@@ -549,7 +549,7 @@ class Gendox_WP_AI_Agent_Settings
 		));
 		add_settings_section(
 			'gendox_widget_options_section',
-			__('Widget Options', 'gendox-wp-ai-agent'),
+			__('Widget Options', 'gendox-ai-agent'),
 			array($this, 'widget_options_section_callback'),
 			'gendox-ai-chat-settings'
 		);
@@ -570,7 +570,7 @@ class Gendox_WP_AI_Agent_Settings
 		// autocomplete="off" keeps browsers from offering it as a saved password.
 		echo '<input type="password" class="form-control" id="gendox_api_key" name="gendox_ai_chat_api_key" value="' . esc_attr($api_key) . '" autocomplete="off" spellcheck="false" />';
 		echo '<div class="input-group-append">';
-		echo '<button type="button" id="gendox_toggle_api_key" class="btn btn-outline-secondary" aria-controls="gendox_api_key" aria-pressed="false" data-label-show="' . esc_attr__('Show', 'gendox-wp-ai-agent') . '" data-label-hide="' . esc_attr__('Hide', 'gendox-wp-ai-agent') . '">' . esc_html__('Show', 'gendox-wp-ai-agent') . '</button>';
+		echo '<button type="button" id="gendox_toggle_api_key" class="btn btn-outline-secondary" aria-controls="gendox_api_key" aria-pressed="false" data-label-show="' . esc_attr__('Show', 'gendox-ai-agent') . '" data-label-hide="' . esc_attr__('Hide', 'gendox-ai-agent') . '">' . esc_html__('Show', 'gendox-ai-agent') . '</button>';
 		echo '<button type="button" id="test_connection_button" class="btn btn-outline-secondary">Test Connection</button>';
 		echo '</div>';
 		echo '</div>';
@@ -630,7 +630,7 @@ class Gendox_WP_AI_Agent_Settings
 	{
 	?>
 		<div class="wrap">
-			<h1><?php echo esc_html(__('Gendox AI Chat Settings', 'gendox-wp-ai-agent')); ?></h1>
+			<h1><?php echo esc_html(__('Gendox AI Chat Settings', 'gendox-ai-agent')); ?></h1>
 
 			<form method="post" action="options.php">
 				<?php settings_fields('gendox_ai_chat_settings_group'); ?>
@@ -670,16 +670,16 @@ class Gendox_WP_AI_Agent_Settings
 		$table_name = $wpdb->prefix . 'gendox_projects';
 		$projects = $wpdb->get_results("SELECT * FROM $table_name");
 
-		echo '<h3 class="gendox-panel-title">' . esc_html__('Gendox Projects', 'gendox-wp-ai-agent') . '</h3>';
+		echo '<h3 class="gendox-panel-title">' . esc_html__('Gendox Projects', 'gendox-ai-agent') . '</h3>';
 	?>
 		<div id="gendox_projects_container">
 			<table id="projects_table" class="table table-hover table-light">
 				<thead class="thead-light">
 					<tr>
-						<th><?php esc_html_e('ID', 'gendox-wp-ai-agent'); ?></th>
-						<th><?php esc_html_e('Project Name', 'gendox-wp-ai-agent'); ?></th>
-						<th><?php esc_html_e('Description', 'gendox-wp-ai-agent'); ?></th>
-						<th><?php esc_html_e('Actions', 'gendox-wp-ai-agent'); ?></th>
+						<th><?php esc_html_e('ID', 'gendox-ai-agent'); ?></th>
+						<th><?php esc_html_e('Project Name', 'gendox-ai-agent'); ?></th>
+						<th><?php esc_html_e('Description', 'gendox-ai-agent'); ?></th>
+						<th><?php esc_html_e('Actions', 'gendox-ai-agent'); ?></th>
 					</tr>
 				</thead>
 				<tbody id="projects_list">
@@ -690,23 +690,23 @@ class Gendox_WP_AI_Agent_Settings
 								<td><?php echo esc_html($project->name); ?></td>
 								<td><?php echo esc_html($project->description) ?: 'No description'; ?></td>
 								<td>
-									<a href="#" class="btn btn-sm btn-warning edit-project" title="<?php echo esc_attr__('Choose which posts, pages, and products this project can train on.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-pencil-alt"></i> Assign Content</a>
-									<a href="#" class="btn btn-sm btn-success assign-chat" data-project-id="<?php echo esc_attr($project->gendoxId); ?>" title="<?php echo esc_attr__('Choose which post types and taxonomies show this project\'s chat widget.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-eye"></i> Assign Chat</a>
-									<a href="#" class="btn btn-sm btn-info view-project" title="<?php echo esc_attr__('See this project\'s details and currently assigned content.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-eye"></i> View</a>
-									<a href="#" class="btn btn-sm btn-danger delete-project" title="<?php echo esc_attr__('Remove this project from the WordPress list. Does not delete it in Gendox.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-trash"></i> Delete</a>
+									<a href="#" class="btn btn-sm btn-warning edit-project" title="<?php echo esc_attr__('Choose which posts, pages, and products this project can train on.', 'gendox-ai-agent'); ?>"><i class="fas fa-pencil-alt"></i> Assign Content</a>
+									<a href="#" class="btn btn-sm btn-success assign-chat" data-project-id="<?php echo esc_attr($project->gendoxId); ?>" title="<?php echo esc_attr__('Choose which post types and taxonomies show this project\'s chat widget.', 'gendox-ai-agent'); ?>"><i class="fas fa-eye"></i> Assign Chat</a>
+									<a href="#" class="btn btn-sm btn-info view-project" title="<?php echo esc_attr__('See this project\'s details and currently assigned content.', 'gendox-ai-agent'); ?>"><i class="fas fa-eye"></i> View</a>
+									<a href="#" class="btn btn-sm btn-danger delete-project" title="<?php echo esc_attr__('Remove this project from the WordPress list. Does not delete it in Gendox.', 'gendox-ai-agent'); ?>"><i class="fas fa-trash"></i> Delete</a>
 								</td>
 							</tr>
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="4"><?php esc_html_e('No projects found.', 'gendox-wp-ai-agent'); ?></td>
+							<td colspan="4"><?php esc_html_e('No projects found.', 'gendox-ai-agent'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
 			</table>
 			<div class="gendox-projects-actions">
-				<button type="button" id="fetch_projects_button" class="btn btn-primary" title="<?php echo esc_attr__('Sync projects from your Gendox organization into this list. Projects missing in Gendox may be removed locally.', 'gendox-wp-ai-agent'); ?>"><?php esc_html_e('Fetch Projects', 'gendox-wp-ai-agent'); ?></button>
-				<button type="button" id="reload_content_button" class="btn btn-secondary" title="<?php echo esc_attr__('Ask Gendox to re-pull assigned WordPress content for training.', 'gendox-wp-ai-agent'); ?>"><?php esc_html_e('Reload Content', 'gendox-wp-ai-agent'); ?></button>
+				<button type="button" id="fetch_projects_button" class="btn btn-primary" title="<?php echo esc_attr__('Sync projects from your Gendox organization into this list. Projects missing in Gendox may be removed locally.', 'gendox-ai-agent'); ?>"><?php esc_html_e('Fetch Projects', 'gendox-ai-agent'); ?></button>
+				<button type="button" id="reload_content_button" class="btn btn-secondary" title="<?php echo esc_attr__('Ask Gendox to re-pull assigned WordPress content for training.', 'gendox-ai-agent'); ?>"><?php esc_html_e('Reload Content', 'gendox-ai-agent'); ?></button>
 				<span id="reload_content_status"></span>
 			</div>
 		</div>
@@ -740,19 +740,19 @@ class Gendox_WP_AI_Agent_Settings
 			<span id="closeViewModal">&times;</span> <!-- Close button -->
 			<h2>View Project</h2>
 			<div id="projectDetails">
-				<p><strong><?php esc_html_e('Project ID:', 'gendox-wp-ai-agent'); ?></strong> <span id="view_projectId"></span></p>
-				<p><strong><?php esc_html_e('Project Name:', 'gendox-wp-ai-agent'); ?></strong> <span id="view_projectName"></span></p>
-				<p><strong><?php esc_html_e('Project Description:', 'gendox-wp-ai-agent'); ?></strong> <span id="view_projectDescription"></span></p>
+				<p><strong><?php esc_html_e('Project ID:', 'gendox-ai-agent'); ?></strong> <span id="view_projectId"></span></p>
+				<p><strong><?php esc_html_e('Project Name:', 'gendox-ai-agent'); ?></strong> <span id="view_projectName"></span></p>
+				<p><strong><?php esc_html_e('Project Description:', 'gendox-ai-agent'); ?></strong> <span id="view_projectDescription"></span></p>
 				<div class="gendoxAssignedItemsType">
-					<span><strong><?php esc_html_e('Assigned Posts:', 'gendox-wp-ai-agent'); ?></strong></span>
+					<span><strong><?php esc_html_e('Assigned Posts:', 'gendox-ai-agent'); ?></strong></span>
 					<div id="view_assignedPosts" class="gendoxAssignedItems"></div>
 				</div>
 				<div class="gendoxAssignedItemsType">
-					<span><strong><?php esc_html_e('Assigned Products:', 'gendox-wp-ai-agent'); ?></strong></span>
+					<span><strong><?php esc_html_e('Assigned Products:', 'gendox-ai-agent'); ?></strong></span>
 					<div id="view_assignedProducts" class="gendoxAssignedItems"></div>
 				</div>
 				<div class="gendoxAssignedItemsType">
-					<span><strong><?php esc_html_e('Assigned Pages:', 'gendox-wp-ai-agent'); ?></strong></span>
+					<span><strong><?php esc_html_e('Assigned Pages:', 'gendox-ai-agent'); ?></strong></span>
 					<div id="view_assignedPages" class="gendoxAssignedItems"></div>
 				</div>
 			</div>
@@ -823,7 +823,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$api_key = isset($_POST['api_key']) ? sanitize_text_field(wp_unslash($_POST['api_key'])) : '';
@@ -853,7 +853,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$api_key = get_option('gendox_ai_chat_api_key');
@@ -980,7 +980,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$api_key = get_option('gendox_ai_chat_api_key');
@@ -988,7 +988,7 @@ class Gendox_WP_AI_Agent_Settings
 			wp_send_json_error('API Key is missing.');
 		}
 
-		$organization_id = Gendox_WP_AI_Agent_Helpers::get_organization_id($api_key);
+		$organization_id = Gendox_AI_Agent_Helpers::get_organization_id($api_key);
 		if (empty($organization_id)) {
 			wp_send_json_error('Failed to retrieve organization ID.');
 		}
@@ -1051,7 +1051,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$posts = get_posts(array(
@@ -1079,7 +1079,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$products = get_posts(array(
@@ -1107,7 +1107,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$pages = get_posts(array(
@@ -1134,7 +1134,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$projectId = isset($_POST['projectId']) ? sanitize_text_field(wp_unslash($_POST['projectId'])) : '';
@@ -1173,7 +1173,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$projectId = isset($_POST['projectId']) ? sanitize_text_field(wp_unslash($_POST['projectId'])) : '';
@@ -1195,7 +1195,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$projectId = isset($_POST['projectId']) ? sanitize_text_field(wp_unslash($_POST['projectId'])) : '';
@@ -1245,7 +1245,7 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		// Retrieve selected values from the AJAX request
@@ -1268,7 +1268,7 @@ class Gendox_WP_AI_Agent_Settings
 			: '';
 
 		if (empty($project_id)) {
-			wp_send_json_error(__('Project ID is missing.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('Project ID is missing.', 'gendox-ai-agent'));
 		}
 
 		// Reject a project that no longer exists locally, so a stale settings page cannot
@@ -1280,7 +1280,7 @@ class Gendox_WP_AI_Agent_Settings
 		);
 
 		if (!$project_exists) {
-			wp_send_json_error(__('Unknown project. Refresh the projects list and try again.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('Unknown project. Refresh the projects list and try again.', 'gendox-ai-agent'));
 		}
 
 		// Save data as an option with the project ID
@@ -1289,7 +1289,7 @@ class Gendox_WP_AI_Agent_Settings
 			'taxonomies' => $taxonomies,
 		]);
 
-		wp_send_json_success(__('Chat settings saved successfully.', 'gendox-wp-ai-agent'));
+		wp_send_json_success(__('Chat settings saved successfully.', 'gendox-ai-agent'));
 	}
 
 	// Get chat settings for a project
@@ -1298,13 +1298,13 @@ class Gendox_WP_AI_Agent_Settings
 		check_ajax_referer('gendox_nonce', 'security');
 
 		if (!$this->current_user_can_manage_gendox()) {
-			wp_send_json_error(__('You do not have permission to do this.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('You do not have permission to do this.', 'gendox-ai-agent'));
 		}
 
 		$project_id = isset($_POST['project_id']) ? sanitize_text_field(wp_unslash($_POST['project_id'])) : '';
 
 		if (empty($project_id)) {
-			wp_send_json_error(__('Project ID is missing.', 'gendox-wp-ai-agent'));
+			wp_send_json_error(__('Project ID is missing.', 'gendox-ai-agent'));
 		}
 
 		// Retrieve the saved settings for the project

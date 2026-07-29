@@ -7,7 +7,7 @@ need this file — see the [`gendox-wordpress-integration`](https://docs.gendox.
 
 ## What this plugin is
 
-`Gendox WP AI Agent` connects a WordPress site to a
+`Gendox AI Agent` connects a WordPress site to a
 [Gendox](https://gendox.dev) instance. It does three things:
 
 1. **Injects the Gendox chat widget** into the public site (`wp_footer`), scoped to the
@@ -21,8 +21,8 @@ need this file — see the [`gendox-wordpress-integration`](https://docs.gendox.
 
 | Path | Role |
 |---|---|
-| `gendox-wp-ai-agent.php` | Entry point. Defines all `GENDOX_*` constants, registers activation/deactivation hooks, boots the `GENDOX()` singleton. **Loads first — constants defined here are global and available everywhere else without any import.** |
-| `core/class-gendox-wp-ai-agent.php` | Singleton. `require_once`s the classes below and instantiates them. |
+| `gendox-ai-agent.php` | Entry point. Defines all `GENDOX_*` constants, registers activation/deactivation hooks, boots the `GENDOX()` singleton. **Loads first — constants defined here are global and available everywhere else without any import.** |
+| `core/class-gendox-ai-agent.php` | Singleton. `require_once`s the classes below and instantiates them. |
 | `core/includes/classes/…-settings.php` | Admin screens, Settings API registration, and all 10 `wp_ajax_*` handlers. Largest file; most changes land here. |
 | `core/includes/classes/…-run.php` | WordPress hooks: asset enqueueing, metaboxes, quick edit, bulk actions, and the `wp_footer` widget `<script>` injection. |
 | `core/includes/classes/…-helpers.php` | Static helpers. Notifies Gendox of integration status on activate/deactivate. |
@@ -67,7 +67,7 @@ leaves their options behind. It has already happened in both the local dev DB an
 wp-demo clone.
 
 **Changing the API key moves the integration.**
-`Gendox_WP_AI_Agent_Settings::gendox_handle_api_key_change()` hooks
+`Gendox_AI_Agent_Settings::gendox_handle_api_key_change()` hooks
 `pre_update_option_gendox_ai_chat_api_key` — on the option, not a `sanitize_callback`, so
 it covers both settings pages that write the key. If the new key resolves to a different
 organization it sends `INACTIVE` for the old one and `ACTIVE` for the new, returning the
@@ -87,7 +87,7 @@ profile and `x-cache: RefreshHit`, `age: 40`.
 
 Consequences for this plugin, until the cache policy is corrected:
 
-- `Gendox_WP_AI_Agent_Helpers::get_organization_id()` may return an organization the
+- `Gendox_AI_Agent_Helpers::get_organization_id()` may return an organization the
   supplied key does not own, so the `gendox_api_key_invalid` branch in
   `gendox_handle_api_key_change()` is unreachable and the organization comparison can be
   wrong.
@@ -172,7 +172,7 @@ at runtime via `window.gendox.widget.updateConfig()`.
 ## Local development
 
 The sibling `gendox-wp-portal` repo runs a full WordPress in Docker and bind-mounts this
-repo to `wp-content/plugins/gendox-wp-ai-agent`, so edits apply on reload with no rebuild.
+repo to `wp-content/plugins/gendox-ai-agent`, so edits apply on reload with no rebuild.
 See that repo's `AGENTS.md`. WordPress serves on `http://localhost:8085`.
 
 Useful checks before finishing:

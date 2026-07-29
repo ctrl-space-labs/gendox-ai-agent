@@ -36,6 +36,9 @@ wp-config.php
 **/.DS_Store
 .idea/
 
+# Release zips (see bin/build-release-zip.sh)
+/builds/
+
 # htaccess
 /.htaccess
 
