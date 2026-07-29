@@ -77,10 +77,10 @@ jQuery(document).ready(function ($) {
                         projectRows += '<td>' + project.name + '</td>';
                         projectRows += '<td>' + (project.description || 'No description') + '</td>';
                         projectRows += '<td>' +
-                            '<a href="#" class="btn btn-sm btn-warning edit-project" title="Assign Content"><i class="fas fa-pencil-alt"></i> Assign Content</a> ' +
-                            '<a href="#" class="btn btn-sm btn-success assign-chat" title="Assign Chat" data-project-id="' + project.gendox_id + '"><i class="fas fa-eye"></i> Assign Chat</a> ' +
-                            '<a href="#" class="btn btn-sm btn-info view-project" title="View"><i class="fas fa-eye"></i> View</a> ' +
-                            '<a href="#" class="btn btn-sm btn-danger delete-project" title="Delete"><i class="fas fa-trash"></i> Delete</a> ' +
+                            '<a href="#" class="btn btn-sm btn-warning edit-project" title="Choose which posts, pages, and products this project can train on."><i class="fas fa-pencil-alt"></i> Assign Content</a> ' +
+                            '<a href="#" class="btn btn-sm btn-success assign-chat" data-project-id="' + project.gendox_id + '" title="Choose which post types and taxonomies show this project\'s chat widget."><i class="fas fa-eye"></i> Assign Chat</a> ' +
+                            '<a href="#" class="btn btn-sm btn-info view-project" title="See this project\'s details and currently assigned content."><i class="fas fa-eye"></i> View</a> ' +
+                            '<a href="#" class="btn btn-sm btn-danger delete-project" title="Remove this project from the WordPress list. Does not delete it in Gendox."><i class="fas fa-trash"></i> Delete</a> ' +
                             '</td>';
                         projectRows += '</tr>';
                     });
@@ -92,6 +92,38 @@ jQuery(document).ready(function ($) {
             },
             error: function () {
                 $projectsList.html('<tr><td colspan="4">Error fetching projects.</td></tr>');
+            }
+        });
+    });
+
+    $('#reload_content_button').on('click', function () {
+        var $button = $(this);
+        var $status = $('#reload_content_status');
+
+        $button.prop('disabled', true);
+        $status.html('<span class="gendox-spinner" style="display: inline-block;"></span> Starting...');
+
+        $.ajax({
+            url: gendox.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'gendox_reload_content',
+                security: gendox.nonce
+            },
+            success: function (response) {
+                $button.prop('disabled', false);
+                if (response.success) {
+                    $status.html('<span style="color: green;">✔️ Content reload started.</span>');
+                } else {
+                    var message = (response.data && typeof response.data === 'string')
+                        ? response.data
+                        : 'Failed to start content reload.';
+                    $status.html('<span style="color: red;">❌ ' + message + '</span>');
+                }
+            },
+            error: function () {
+                $button.prop('disabled', false);
+                $status.html('<span style="color: red;">❌ Failed to start content reload.</span>');
             }
         });
     });

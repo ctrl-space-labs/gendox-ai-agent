@@ -133,10 +133,29 @@ properties to keep future tweaks in one place.
     border-top: 1px solid var(--gendox-border);
 }
 
-/* Fetch Projects closes its panel the same way Save Changes closes the settings one. */
-.toplevel_page_gendox-ai-chat-settings #fetch_projects_button {
-    display: inline-block;
+/* Project action buttons sit under the table the same way Save closes the settings panel. */
+.toplevel_page_gendox-ai-chat-settings .gendox-projects-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     margin: 0 0 16px;
+}
+
+.toplevel_page_gendox-ai-chat-settings .gendox-projects-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 38px;
+    margin: 0;
+    padding: 0 16px;
+    line-height: 1.2;
+    vertical-align: middle;
+}
+
+.toplevel_page_gendox-ai-chat-settings .gendox-projects-actions #reload_content_status {
+    line-height: 38px;
 }
 
 .toplevel_page_gendox-ai-chat-settings #projects_table {
@@ -177,6 +196,26 @@ properties to keep future tweaks in one place.
 .toplevel_page_gendox-ai-chat-settings .btn-success:hover {
     background-color: var(--gendox-primary-dark);
     border-color: var(--gendox-primary-dark);
+}
+
+.toplevel_page_gendox-ai-chat-settings .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+}
+
+.toplevel_page_gendox-ai-chat-settings .btn-secondary:hover,
+.toplevel_page_gendox-ai-chat-settings .btn-secondary:focus {
+    background-color: #5a6268;
+    border-color: #545b62;
+    color: #fff;
+}
+
+.toplevel_page_gendox-ai-chat-settings .btn-secondary:disabled {
+    opacity: 0.65;
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
 }
 
 .toplevel_page_gendox-ai-chat-settings .btn-warning {

@@ -39,6 +39,7 @@ class Gendox_WP_AI_Agent_Settings
 		add_action('admin_init', array($this, 'register_settings'));
 		add_action('wp_ajax_gendox_test_connection', array($this, 'gendox_test_connection'));
 		add_action('wp_ajax_gendox_fetch_projects', array($this, 'gendox_fetch_projects'));
+		add_action('wp_ajax_gendox_reload_content', array($this, 'gendox_reload_content'));
 		add_action('wp_ajax_gendox_save_project_changes', array($this, 'gendox_save_project_changes'));
 		add_action('wp_ajax_gendox_fetch_posts', array($this, 'gendox_fetch_posts'));
 		add_action('wp_ajax_gendox_fetch_products', array($this, 'gendox_fetch_products'));
@@ -459,10 +460,10 @@ class Gendox_WP_AI_Agent_Settings
 								<td><?php echo esc_html($project->name); ?></td>
 								<td><?php echo esc_html($project->description) ?: 'No description'; ?></td>
 								<td>
-									<a href="#" class="btn btn-sm btn-warning edit-project" title="Edit"><i class="fas fa-pencil-alt"></i> Assign Content</a>
-									<a href="#" class="btn btn-sm btn-success assign-chat" title="Assign Chat" data-project-id="<?php echo esc_attr($project->gendoxId); ?>"><i class="fas fa-eye"></i> Assign Chat</a>
-									<a href="#" class="btn btn-sm btn-info view-project" title="View"><i class="fas fa-eye"></i> View</a>
-									<a href="#" class="btn btn-sm btn-danger delete-project" title="Delete"><i class="fas fa-trash"></i> Delete</a>
+									<a href="#" class="btn btn-sm btn-warning edit-project" title="<?php echo esc_attr__('Choose which posts, pages, and products this project can train on.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-pencil-alt"></i> Assign Content</a>
+									<a href="#" class="btn btn-sm btn-success assign-chat" data-project-id="<?php echo esc_attr($project->gendoxId); ?>" title="<?php echo esc_attr__('Choose which post types and taxonomies show this project\'s chat widget.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-eye"></i> Assign Chat</a>
+									<a href="#" class="btn btn-sm btn-info view-project" title="<?php echo esc_attr__('See this project\'s details and currently assigned content.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-eye"></i> View</a>
+									<a href="#" class="btn btn-sm btn-danger delete-project" title="<?php echo esc_attr__('Remove this project from the WordPress list. Does not delete it in Gendox.', 'gendox-wp-ai-agent'); ?>"><i class="fas fa-trash"></i> Delete</a>
 								</td>
 							</tr>
 						<?php endforeach; ?>
@@ -473,7 +474,11 @@ class Gendox_WP_AI_Agent_Settings
 					<?php endif; ?>
 				</tbody>
 			</table>
-			<button type="button" id="fetch_projects_button" class="btn btn-primary">Fetch Projects</button>
+			<div class="gendox-projects-actions">
+				<button type="button" id="fetch_projects_button" class="btn btn-primary" title="<?php echo esc_attr__('Sync projects from your Gendox organization into this list. Projects missing in Gendox may be removed locally.', 'gendox-wp-ai-agent'); ?>"><?php esc_html_e('Fetch Projects', 'gendox-wp-ai-agent'); ?></button>
+				<button type="button" id="reload_content_button" class="btn btn-secondary" title="<?php echo esc_attr__('Ask Gendox to re-pull assigned WordPress content for training.', 'gendox-wp-ai-agent'); ?>"><?php esc_html_e('Reload Content', 'gendox-wp-ai-agent'); ?></button>
+				<span id="reload_content_status"></span>
+			</div>
 		</div>
 		<div id="editProjectModal" style="display:none;">
 			<!-- close modal -->
@@ -730,6 +735,60 @@ class Gendox_WP_AI_Agent_Settings
 		} else {
 			wp_send_json_error('Failed to fetch projects from API.');
 		}
+	}
+
+	public function gendox_reload_content()
+	{
+		check_ajax_referer('gendox_nonce', 'security');
+
+		$api_key = get_option('gendox_ai_chat_api_key');
+		if (empty($api_key)) {
+			wp_send_json_error('API Key is missing.');
+		}
+
+		$organization_id = Gendox_WP_AI_Agent_Helpers::get_organization_id($api_key);
+		if (empty($organization_id)) {
+			wp_send_json_error('Failed to retrieve organization ID.');
+		}
+
+		$api_base_url = get_option('gendox_api_base_url', GENDOX_DEFAULT_URL);
+		$url = rtrim($api_base_url, '/') . '/gendox/api/v1/organizations/' . rawurlencode($organization_id) . '/integrations/trigger';
+
+		$curl = curl_init();
+		curl_setopt_array($curl, [
+			CURLOPT_URL => $url,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 30,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_HTTPHEADER => [
+				'Content-Type: application/json',
+				'x-api-key: ' . $api_key,
+			],
+			CURLOPT_SSL_VERIFYHOST => true,
+			CURLOPT_SSL_VERIFYPEER => true,
+			CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+		]);
+
+		curl_exec($curl);
+		$http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+		if (curl_errno($curl)) {
+			$error = curl_error($curl);
+			curl_close($curl);
+			wp_send_json_error('Failed to trigger content reload: ' . $error);
+		}
+
+		curl_close($curl);
+
+		if ($http_code === 202) {
+			wp_send_json_success(['message' => 'Content reload started.']);
+		}
+
+		wp_send_json_error('Failed to trigger content reload. HTTP status: ' . $http_code);
 	}
 
 	public function gendox_get_api_call($api_key)
