@@ -244,6 +244,12 @@ class Gendox_WP_AI_Agent_Run
 			}
 		}
 
+		// Always posted with the classic editor form so save_project_assignment can tell a
+		// real metabox save from Avada / Live Builder / REST saves that omit the checkboxes.
+		// Without this, a missing assigned_projects[] is indistinguishable from "uncheck all".
+		wp_nonce_field('gendox_project_assignment', 'gendox_project_assignment_nonce');
+		echo '<input type="hidden" name="gendox_project_assignment_submitted" value="1" />';
+
 		echo '<label>' . __('Select Projects:', 'gendox-wp-ai-agent') . '</label><br>';
 
 		// Loop through projects and create checkboxes
@@ -259,32 +265,59 @@ class Gendox_WP_AI_Agent_Run
 	// Save the Project Assignment
 	public function save_project_assignment($post_id)
 	{
-		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+			return;
+		}
+
+		if (wp_is_post_revision($post_id)) {
+			return;
+		}
+
+		// Only act when the classic-editor metabox was part of this save. Avada (and other
+		// builders) fire save_post without our fields; treating that as an empty selection
+		// would wipe the page/post from every project's assigned content.
+		if (empty($_POST['gendox_project_assignment_submitted'])) {
+			return;
+		}
+
+		if (
+			empty($_POST['gendox_project_assignment_nonce']) ||
+			!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['gendox_project_assignment_nonce'])), 'gendox_project_assignment')
+		) {
+			return;
+		}
+
+		$post_type = get_post_type($post_id);
+		if (!in_array($post_type, ['product', 'post', 'page'], true)) {
+			return;
+		}
 
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'gendox_projects';
-		$assigned_projects = isset($_POST['assigned_projects']) ? $_POST['assigned_projects'] : [];
+		$assigned_projects = isset($_POST['assigned_projects']) ? (array) $_POST['assigned_projects'] : [];
+		$assigned_projects = array_map('sanitize_text_field', $assigned_projects);
 		$all_projects = $wpdb->get_results("SELECT gendoxId, postIds FROM $table_name");
+		$item_key = ($post_type === 'product') ? 'products' : ($post_type === 'page' ? 'pages' : 'posts');
+		$post_id = (int) $post_id;
 
 		foreach ($all_projects as $project) {
 			$project_id = $project->gendoxId;
 			$assigned_items = maybe_unserialize($project->postIds) ?: ['products' => [], 'posts' => [], 'pages' => []];
+			if (!isset($assigned_items[$item_key]) || !is_array($assigned_items[$item_key])) {
+				$assigned_items[$item_key] = [];
+			}
 
-			$post_type = get_post_type($post_id);
-			$item_key = ($post_type === 'product') ? 'products' : ($post_type === 'page' ? 'pages' : 'posts');
-
-			if (in_array(
-				$project_id,
-				$assigned_projects
-			)) {
-				if (!in_array($post_id, $assigned_items[$item_key])) {
+			if (in_array($project_id, $assigned_projects, true)) {
+				if (!in_array($post_id, array_map('intval', $assigned_items[$item_key]), true)) {
 					$assigned_items[$item_key][] = $post_id;
 				}
 			} else {
-				$assigned_items[$item_key] = array_filter($assigned_items[$item_key], function ($id) use ($post_id) {
-					return $id !== $post_id;
-				});
-				$assigned_items[$item_key] = array_values($assigned_items[$item_key]);
+				$assigned_items[$item_key] = array_values(array_filter(
+					$assigned_items[$item_key],
+					function ($id) use ($post_id) {
+						return (int) $id !== $post_id;
+					}
+				));
 			}
 
 			$wpdb->update(
@@ -292,7 +325,7 @@ class Gendox_WP_AI_Agent_Run
 				['postIds' => maybe_serialize($assigned_items)],
 				['gendoxId' => $project_id],
 				['%s'],
-				['%d']
+				['%s']
 			);
 		}
 	}
@@ -344,6 +377,7 @@ class Gendox_WP_AI_Agent_Run
 
 			echo '<fieldset class="inline-edit-col-right">';
 			echo '<div class="inline-edit-col">';
+			echo '<input type="hidden" name="gendox_project_quick_edit_submitted" value="1" />';
 			echo '<label><p class="title"><strong>' . __('Assigned Projects', 'gendox-wp-ai-agent') . '</strong></p><div class="checkbox-group">';
 
 			foreach ($projects as $project) {
@@ -360,71 +394,60 @@ class Gendox_WP_AI_Agent_Run
 	// Save Project in Quick Edit
 	public function save_project_quick_edit($post_id)
 	{
-		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+			return;
+		}
 
-		if (isset($_POST['assigned_projects']) && is_array($_POST['assigned_projects'])) {
-			global $wpdb;
-			$table_name = $wpdb->prefix . 'gendox_projects';
-			$assigned_projects = $_POST['assigned_projects'];
-			$all_projects = $wpdb->get_results("SELECT gendoxId, postIds FROM $table_name");
+		if (wp_is_post_revision($post_id)) {
+			return;
+		}
 
-			foreach ($all_projects as $project) {
-				$project_id = $project->gendoxId;
-				$assigned_items = maybe_unserialize($project->postIds) ?: ['products' => [], 'posts' => [], 'pages' => []];
+		// Same trap as the metabox: a normal editor save (or Avada) does not include
+		// quick-edit fields. Missing assigned_projects[] must not mean "remove from all".
+		if (empty($_POST['gendox_project_quick_edit_submitted'])) {
+			return;
+		}
 
-				$post_type = get_post_type($post_id);
-				$item_key = ($post_type === 'product') ? 'products' : ($post_type === 'page' ? 'pages' : 'posts');
+		$post_type = get_post_type($post_id);
+		if (!in_array($post_type, ['product', 'post', 'page'], true)) {
+			return;
+		}
 
-				if (in_array($project_id, $assigned_projects)) {
-					// If the project is in the selected list, add post ID if it's not already there
-					if (!in_array($post_id, $assigned_items[$item_key])) {
-						$assigned_items[$item_key][] = $post_id;
-					}
-				} else {
-					// If the project is NOT in the selected list, remove post ID if it exists
-					$assigned_items[$item_key] = array_filter($assigned_items[$item_key], function ($id) use ($post_id) {
-						return $id !== $post_id;
-					});
-					// make the order of the array correct
-					$assigned_items[$item_key] = array_values($assigned_items[$item_key]);
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'gendox_projects';
+		$assigned_projects = isset($_POST['assigned_projects']) ? (array) $_POST['assigned_projects'] : [];
+		$assigned_projects = array_map('sanitize_text_field', $assigned_projects);
+		$all_projects = $wpdb->get_results("SELECT gendoxId, postIds FROM $table_name");
+		$item_key = ($post_type === 'product') ? 'products' : ($post_type === 'page' ? 'pages' : 'posts');
+		$post_id = (int) $post_id;
+
+		foreach ($all_projects as $project) {
+			$project_id = $project->gendoxId;
+			$assigned_items = maybe_unserialize($project->postIds) ?: ['products' => [], 'posts' => [], 'pages' => []];
+			if (!isset($assigned_items[$item_key]) || !is_array($assigned_items[$item_key])) {
+				$assigned_items[$item_key] = [];
+			}
+
+			if (in_array($project_id, $assigned_projects, true)) {
+				if (!in_array($post_id, array_map('intval', $assigned_items[$item_key]), true)) {
+					$assigned_items[$item_key][] = $post_id;
 				}
-
-				// Serialize and update the `postIds` field for this project
-				$wpdb->update(
-					$table_name,
-					['postIds' => maybe_serialize($assigned_items)],
-					['gendoxId' => $project_id],
-					['%s'],
-					['%d']
-				);
+			} else {
+				$assigned_items[$item_key] = array_values(array_filter(
+					$assigned_items[$item_key],
+					function ($id) use ($post_id) {
+						return (int) $id !== $post_id;
+					}
+				));
 			}
-		} else {
-			//remove from all projects
-			global $wpdb;
-			$table_name = $wpdb->prefix . 'gendox_projects';
-			$all_projects = $wpdb->get_results("SELECT gendoxId, postIds FROM $table_name");
 
-			foreach ($all_projects as $project) {
-				$project_id = $project->gendoxId;
-				$assigned_items = maybe_unserialize($project->postIds) ?: ['products' => [], 'posts' => [], 'pages' => []];
-				$post_type = get_post_type($post_id);
-				$item_key = ($post_type === 'product') ? 'products' : ($post_type === 'page' ? 'pages' : 'posts');
-
-				// Remove the post ID from the appropriate item type
-				$assigned_items[$item_key] = array_filter($assigned_items[$item_key], function ($id) use ($post_id) {
-					return $id !== $post_id;
-				});
-				$assigned_items[$item_key] = array_values($assigned_items[$item_key]);
-
-				// Serialize and update the `postIds` field for this project
-				$wpdb->update(
-					$table_name,
-					['postIds' => maybe_serialize($assigned_items)],
-					['gendoxId' => $project_id],
-					['%s'],
-					['%d']
-				);
-			}
+			$wpdb->update(
+				$table_name,
+				['postIds' => maybe_serialize($assigned_items)],
+				['gendoxId' => $project_id],
+				['%s'],
+				['%s']
+			);
 		}
 	}
 
