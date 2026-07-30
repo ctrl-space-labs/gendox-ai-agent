@@ -49,17 +49,26 @@ chat what they want instead of hunting through menus for it.
 
 = External service =
 
-This plugin connects your site to **Gendox**, a third-party AI service, which is required
-for the plugin to function. Content you explicitly assign to a project is sent to Gendox
-to train your agent, and visitor chat messages are sent to Gendox to generate replies.
+This plugin connects your site to a **Gendox** instance, which is required for the plugin
+to function. That can be the hosted service at [gendox.dev](https://gendox.dev) or your
+own self-hosted install — Gendox is open source. Content you explicitly assign to a
+project is sent to that Gendox instance to train your agent, and visitor chat messages
+are sent there to generate replies.
+
+A [gendox.dev](https://gendox.dev) account is **not** mandatory. You can self-host Gendox
+and keep it free forever; see the open-source core at
+[github.com/ctrl-space-labs/gendox-core](https://github.com/ctrl-space-labs/gendox-core).
+Point the plugin's Chat Script URL and API Base URL at your instance, then use an API key
+from that install.
 
 * Service: [Gendox](https://gendox.dev)
 * Terms and conditions: [https://gendox.dev/terms-conditions/](https://gendox.dev/terms-conditions/)
 * Privacy policy: [https://gendox.dev/privacy-policy/](https://gendox.dev/privacy-policy/)
 * Documentation: [https://docs.gendox.dev/](https://docs.gendox.dev/)
+* Open source: [https://github.com/ctrl-space-labs/gendox-core](https://github.com/ctrl-space-labs/gendox-core)
 
-A Gendox account and API key are required. No content leaves your site until you enter an
-API key and explicitly assign content to a project.
+An API key from whichever Gendox instance you use is required. No content leaves your site
+until you enter that key and explicitly assign content to a project.
 
 == Installation ==
 
@@ -74,8 +83,17 @@ API key and explicitly assign content to a project.
 
 = Do I need a Gendox account? =
 
-Yes. The plugin connects your site to Gendox, where your AI agent is trained and hosted.
-Create one at [app.gendox.dev](https://app.gendox.dev).
+No. A hosted account at [app.gendox.dev](https://app.gendox.dev) is optional. The plugin
+needs a Gendox instance and an API key from that instance — either the hosted platform or
+one you run yourself.
+
+= Can I self-host Gendox and keep it free? =
+
+Yes. Gendox is open source. You can self-host it and use this plugin against your own
+install with no gendox.dev subscription. The core project is on GitHub:
+[https://github.com/ctrl-space-labs/gendox-core](https://github.com/ctrl-space-labs/gendox-core).
+After you deploy it, set the Chat Script URL and Gendox API Base URL in the plugin
+settings to your instance.
 
 = Does the AI make up answers? =
 
