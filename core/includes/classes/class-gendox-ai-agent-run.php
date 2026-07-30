@@ -188,7 +188,7 @@ class Gendox_AI_Agent_Run
 		foreach ($post_types as $post_type) {
 			add_meta_box(
 				'project_assignment_metabox',
-				__('Assign Project', 'gendox-ai-agent'),
+				__('Assign Agent', 'gendox-ai-agent'),
 				array($this, 'render_project_metabox'),
 				$post_type,
 				'side',
@@ -225,7 +225,7 @@ class Gendox_AI_Agent_Run
 		wp_nonce_field('gendox_project_assignment', 'gendox_project_assignment_nonce');
 		echo '<input type="hidden" name="gendox_project_assignment_submitted" value="1" />';
 
-		echo '<label>' . esc_html__('Select Projects:', 'gendox-ai-agent') . '</label><br>';
+		echo '<label>' . esc_html__('Select Agents:', 'gendox-ai-agent') . '</label><br>';
 
 		// Loop through projects and create checkboxes
 		foreach ($projects as $project) {
@@ -308,7 +308,7 @@ class Gendox_AI_Agent_Run
 	// 2. Add Project Assignment in Quick Edit
 	public function add_project_column($columns)
 	{
-		$columns['assigned_project'] = __('Assigned Project', 'gendox-ai-agent');
+		$columns['assigned_project'] = __('Assigned Agent', 'gendox-ai-agent');
 		return $columns;
 	}
 
@@ -354,7 +354,7 @@ class Gendox_AI_Agent_Run
 			echo '<div class="inline-edit-col">';
 			wp_nonce_field('gendox_project_quick_edit', 'gendox_project_quick_edit_nonce');
 			echo '<input type="hidden" name="gendox_project_quick_edit_submitted" value="1" />';
-			echo '<label><p class="title"><strong>' . esc_html__('Assigned Projects', 'gendox-ai-agent') . '</strong></p><div class="checkbox-group">';
+			echo '<label><p class="title"><strong>' . esc_html__('Assigned Agents', 'gendox-ai-agent') . '</strong></p><div class="checkbox-group">';
 
 			foreach ($projects as $project) {
 				echo '<label class="inline-edit-project-label">';
@@ -441,12 +441,12 @@ class Gendox_AI_Agent_Run
 		$table_name = $wpdb->prefix . 'gendox_projects';
 		$projects = $wpdb->get_results("SELECT * FROM $table_name");
 
-		// Add Assign and Remove actions for each project
+		// Add Assign and Remove actions for each agent (Gendox project)
 		foreach ($projects as $project) {
-			/* translators: %s: project name */
-			$bulk_actions['assign_to_project_' . $project->gendoxId] = sprintf(__('Assign to Project: %s', 'gendox-ai-agent'), $project->name);
-			/* translators: %s: project name */
-			$bulk_actions['remove_from_project_' . $project->gendoxId] = sprintf(__('Remove from Project: %s', 'gendox-ai-agent'), $project->name);
+			/* translators: %s: agent (Gendox project) name */
+			$bulk_actions['assign_to_project_' . $project->gendoxId] = sprintf(__('Assign to Agent: %s', 'gendox-ai-agent'), $project->name);
+			/* translators: %s: agent (Gendox project) name */
+			$bulk_actions['remove_from_project_' . $project->gendoxId] = sprintf(__('Remove from Agent: %s', 'gendox-ai-agent'), $project->name);
 		}
 
 		return $bulk_actions;
