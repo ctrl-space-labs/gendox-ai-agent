@@ -75,11 +75,15 @@ class Gendox_AI_Agent_Settings
 	}
 
 	/**
-	 * Moves the integration when the API key points at a different organization.
+	 * Keeps the Gendox integration status in sync when the API key changes.
 	 *
-	 * Deactivates the outgoing organization and activates the incoming one. The key is only
-	 * saved if both calls succeed; on failure the previous state is restored and the old key
-	 * is kept, so the stored key always matches the active integration.
+	 * - Empty key: deactivate the current organization (save always proceeds).
+	 * - First key / after clear: activate the new organization.
+	 * - Different organization: deactivate the outgoing one, then activate the incoming one.
+	 * - Same organization: key may change, but status is already correct — no-op.
+	 *
+	 * Except when clearing, the key is only saved if the required status call(s) succeed; on
+	 * failure the previous state is restored and the old key is kept.
 	 *
 	 * @param string $new_value Incoming API key.
 	 * @param string $old_value Currently stored API key.
@@ -118,8 +122,22 @@ class Gendox_AI_Agent_Settings
 			? null
 			: Gendox_AI_Agent_Helpers::get_organization_id($old_value);
 
-		// Same organization, or no previous integration to move.
-		if (!$old_organization_id || $old_organization_id === $new_organization_id) {
+		// First key, or re-adding after clear: activate — previously this returned early and
+		// left the integration inactive until a plugin deactivate/reactivate.
+		if (!$old_organization_id) {
+			if (!Gendox_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE')) {
+				add_settings_error(
+					'gendox_ai_chat_api_key',
+					'gendox_activate_failed',
+					__('Could not activate the integration for the new organization. The API key has not been changed.', 'gendox-ai-agent')
+				);
+				return $old_value;
+			}
+			return $new_value;
+		}
+
+		// Same organization: status is already correct.
+		if ($old_organization_id === $new_organization_id) {
 			return $new_value;
 		}
 

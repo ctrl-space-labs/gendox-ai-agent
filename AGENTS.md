@@ -158,9 +158,12 @@ otherwise nest.
 `wp_footer`, so it has no handle and nothing can declare a dependency on it. This
 constrains how integrators hook into it — see the [`gendox-wordpress-integration`](https://docs.gendox.dev/skills/gendox-wordpress-integration/SKILL.md) skill.
 
-**No filter hooks exist.** The only extension point is `do_action('GENDOX/plugin_loaded')`.
-Third parties cannot currently alter the widget's `data-*` attributes. Adding a filter
-around the script attributes would be a genuinely useful, low-risk improvement.
+**Almost no filter hooks exist.** The only other extension points are
+`do_action('GENDOX/plugin_loaded')` and `apply_filters('gendox_product_content_fields', ...)`
+(in `class-gendox-api-endpoints.php`, letting extensions like WooCommerce Subscriptions add
+fields to a product's HTML content block without this plugin knowing about them). Third
+parties still cannot alter the widget's `data-*` attributes — adding a filter around the
+script attributes would be a genuinely useful, low-risk improvement.
 
 **The widget script omits most SDK options.** The SDK supports
 `data-gendox-chat-initial-state`, `data-gendox-local-context-*` and

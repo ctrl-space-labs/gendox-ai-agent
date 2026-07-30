@@ -5,7 +5,7 @@ Tags: ai, chatbot, ai agent, ai assistant, customer support
 Requires at least: 5.8
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,6 +132,12 @@ extra page context with each message. See the
 4. The AI chat widget on the front end
 
 == Changelog ==
+
+= 1.0.5: July 30, 2026 =
+* Fix saving a new API key leaving the Gendox integration inactive until the plugin was deactivated and reactivated. Reload Content and other sync actions now work after the first Save
+* Clearing the API key still marks the integration inactive; saving a key when none was stored (or after a clear) now marks it active
+* WooCommerce products are returned to Gendox as structured HTML (title, price, SKU, stock, categories, short description, description, and image URLs), not only the long description
+* Product content can be extended via the gendox_product_content_fields filter (for example WooCommerce Subscriptions fields)
 
 = 1.0.4: July 28, 2026 =
 * The settings screen is now a single page. The WordPress Settings and API Settings tabs are gone, and the API key and URL settings save together with one Save Changes button

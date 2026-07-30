@@ -145,30 +145,229 @@ class Gendox_API_Endpoints
         $content_id = intval($request->get_param('content_id'));
         $post = get_post($content_id);
 
-        if ($post) {
-            // Process the content to remove shortcodes but keep HTML
-            $content = $post->post_content;
-
-            // Remove shortcodes
-            $content = preg_replace('#\[[^\]]+\]#', '', $content);
-
-            // Apply the_content filters to preserve HTML structure
-            $content = apply_filters('the_content', $content);
-
-            // Return the content and other relevant details
-            $content_data = array(
-                'id' => $post->ID,
-//                 'title' => $post->post_title,
-                'content' => $content,
-//                 'type' => $post->post_type,
-//                 'status' => $post->post_status,
-				'source' => get_permalink($post->ID)
-            );
-
-            return new WP_REST_Response($content_data, 200);
-        } else {
+        if (!$post) {
             return new WP_REST_Response(['message' => 'Content not found.'], 404);
         }
+
+        $product = ('product' === $post->post_type && function_exists('wc_get_product'))
+            ? wc_get_product($post)
+            : false;
+
+        $content = $product
+            ? $this->build_product_content($product)
+            : $this->build_post_content($post);
+
+        $content_data = array(
+            'id' => $post->ID,
+            'content' => $content,
+            'source' => get_permalink($post->ID),
+        );
+
+        return new WP_REST_Response($content_data, 200);
+    }
+
+    /**
+     * Rendered content for a regular post/page.
+     *
+     * Shortcodes are stripped (their output isn't meaningful outside a live page render)
+     * but `the_content` filters still run, so block/embed HTML structure is preserved.
+     *
+     * @param WP_Post $post
+     * @return string
+     */
+    private function build_post_content($post)
+    {
+        $content = preg_replace('#\[[^\]]+\]#', '', $post->post_content);
+
+        return apply_filters('the_content', $content);
+    }
+
+    /**
+     * Builds the HTML content block sent to Gendox for a WooCommerce product.
+     *
+     * Real HTML (not pseudo-XML): an `<article>` with semantic children and
+     * `gendox-product-*` classes. Description HTML is kept (headings/lists help the
+     * model); shortcodes are stripped because they do not render usefully off-page.
+     * Price display HTML is reduced to plain text — its `<del>`/`<ins>`/spans are
+     * storefront chrome, not content structure.
+     *
+     * Kept as its own method (and filter) so product data can grow — attributes,
+     * variations, subscription terms from extensions — without the post/page path
+     * having to know about any of it.
+     *
+     * @param WC_Product $product
+     * @return string
+     */
+    private function build_product_content($product)
+    {
+        $category_names = wp_get_post_terms($product->get_id(), 'product_cat', array('fields' => 'names'));
+        $availability = $product->get_availability();
+        $stock_text = isset($availability['availability']) ? $availability['availability'] : '';
+
+        $fields = array(
+            'title' => $product->get_name(),
+            'price' => $this->html_to_plain_text($product->get_price_html()),
+            'sku' => $product->get_sku(),
+            'stock' => $stock_text,
+            'categories' => is_array($category_names) ? implode(', ', $category_names) : '',
+            'short_description' => $this->prepare_product_rich_text($product->get_short_description()),
+            'description' => $this->prepare_product_rich_text($product->get_description()),
+            'images' => $this->get_product_image_urls($product),
+        );
+
+        /**
+         * Filters the fields used to build a product's Gendox HTML content.
+         *
+         * Lets integrations (e.g. WooCommerce Subscriptions, Bookings) add their own
+         * fields without this plugin needing built-in knowledge of every extension.
+         * Empty string / empty array values are omitted. Known keys use fixed wrappers
+         * (`title` → `<h1>`, `images` → `<ul>`, etc.); any other key becomes
+         * `<div class="gendox-product-{key}">…</div>`.
+         *
+         * @param array<string, string|string[]> $fields  Field name => string value, or
+         *                                                URL list for `images`.
+         * @param WC_Product                     $product
+         */
+        $fields = apply_filters('gendox_product_content_fields', $fields, $product);
+
+        $type = esc_attr($product->get_type());
+        $html = '<article class="gendox-product" data-product-type="' . $type . '">' . "\n";
+
+        foreach ($fields as $key => $value) {
+            $rendered = $this->render_product_content_field($key, $value);
+            if ('' !== $rendered) {
+                $html .= $rendered . "\n";
+            }
+        }
+
+        $html .= '</article>';
+
+        return $html;
+    }
+
+    /**
+     * Renders one product content field as HTML, or an empty string when omitted.
+     *
+     * @param string              $key   Field name (`title`, `price`, …, or a custom key).
+     * @param string|string[]     $value Plain text, rich HTML, or image URL list.
+     * @return string
+     */
+    private function render_product_content_field($key, $value)
+    {
+        $key = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $key));
+        if ('' === $key) {
+            return '';
+        }
+
+        if ('images' === $key) {
+            $urls = is_array($value) ? $value : array_filter(array_map('trim', explode(',', (string) $value)));
+            return $this->render_product_images_list($urls);
+        }
+
+        $value = is_array($value) ? implode(', ', $value) : (string) $value;
+        $value = trim($value);
+        if ('' === $value) {
+            return '';
+        }
+
+        $class = 'gendox-product-' . str_replace('_', '-', $key);
+
+        // Description fields keep author HTML; scalar metadata is escaped.
+        $rich_keys = array('short_description', 'description');
+        $inner = in_array($key, $rich_keys, true) ? $value : esc_html($value);
+
+        $wrappers = array(
+            'title' => 'h1',
+            'price' => 'p',
+            'sku' => 'p',
+            'stock' => 'p',
+            'categories' => 'p',
+            'short_description' => 'div',
+            'description' => 'div',
+        );
+        $tag = isset($wrappers[$key]) ? $wrappers[$key] : 'div';
+
+        return '<' . $tag . ' class="' . esc_attr($class) . '">' . $inner . '</' . $tag . '>';
+    }
+
+    /**
+     * Public, full-size image URLs for a product: featured image first, then gallery.
+     *
+     * These are the same URLs WordPress serves on the live site, so no auth is needed
+     * to fetch them.
+     *
+     * @param WC_Product $product
+     * @return string[]
+     */
+    private function get_product_image_urls($product)
+    {
+        $attachment_ids = array_unique(array_filter(array_merge(
+            array($product->get_image_id()),
+            $product->get_gallery_image_ids()
+        )));
+
+        $urls = array();
+        foreach ($attachment_ids as $attachment_id) {
+            $url = wp_get_attachment_image_url($attachment_id, 'full');
+            if ($url) {
+                $urls[] = $url;
+            }
+        }
+
+        return $urls;
+    }
+
+    /**
+     * Builds the `<ul class="gendox-product-images">` list, or empty string if none.
+     *
+     * @param string[] $urls
+     * @return string
+     */
+    private function render_product_images_list($urls)
+    {
+        $items = '';
+        foreach ($urls as $url) {
+            $url = esc_url(trim((string) $url));
+            if ('' === $url) {
+                continue;
+            }
+            $items .= '<li><a href="' . $url . '">' . esc_html($url) . '</a></li>';
+        }
+
+        if ('' === $items) {
+            return '';
+        }
+
+        return '<ul class="gendox-product-images">' . $items . '</ul>';
+    }
+
+    /**
+     * Description / short description: strip shortcodes, keep HTML structure.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function prepare_product_rich_text($html)
+    {
+        return trim(strip_shortcodes((string) $html));
+    }
+
+    /**
+     * Reduces price (and similar) HTML to plain text — strips tags/shortcodes and
+     * normalizes whitespace/entities so storefront chrome does not enter the corpus.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function html_to_plain_text($html)
+    {
+        $text = strip_shortcodes((string) $html);
+        $text = wp_strip_all_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        $text = str_replace("\xc2\xa0", ' ', $text); // Non-breaking spaces from price/currency HTML.
+        $text = preg_replace("/\n{3,}/", "\n\n", $text);
+
+        return trim($text);
     }
 
     /**
