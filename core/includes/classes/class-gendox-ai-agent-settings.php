@@ -48,8 +48,6 @@ class Gendox_AI_Agent_Settings
 		add_action('wp_ajax_gendox_view_project', array($this, 'gendox_view_project'));
 		add_action('wp_ajax_gendox_save_chat_settings', array($this, 'gendox_save_chat_settings'));
 		add_action('wp_ajax_gendox_get_chat_settings', array($this, 'gendox_get_chat_settings'));
-		add_action('admin_menu', array($this, 'add_hidden_settings_page'));
-		add_action('admin_init', array($this, 'register_hidden_setting'));
 
 		// On the option rather than a sanitize_callback, so it covers both settings pages
 		// that write the API key.
@@ -194,80 +192,6 @@ class Gendox_AI_Agent_Settings
 		return $icon;
 	}
 
-	public function add_hidden_settings_page()
-	{
-		add_submenu_page(
-			null,
-			'Chat Script Settings',
-			'Chat Script Settings',
-			'manage_options',
-			'chat-script-settings',
-			array($this, 'render_settings_page')
-		);
-	}
-
-	public function render_settings_page()
-	{
-		// Check if user is allowed to access the page
-		if (!current_user_can('manage_options')) {
-			return;
-		}
-
-		// Output the page content
-?>
-		<div class="wrap">
-			<h1><?php esc_html_e('Chat Script Settings', 'gendox-ai-agent'); ?></h1>
-			<form method="post" action="options.php">
-				<?php
-				// Same options group as the visible API Settings tab, so both places
-				// save the same two options (gendox_chat_script_url, gendox_api_base_url).
-				settings_fields('gendox_api_settings_group');
-				do_settings_sections('chat-script-settings');
-				submit_button();
-				?>
-			</form>
-		</div>
-	<?php
-	}
-
-	public function register_hidden_setting()
-	{
-		// Both options are already registered under 'gendox_api_settings_group' in
-		// register_settings() below (that's what the visible API Settings tab uses).
-		// We only need to add the same two fields again, targeting this page's slug,
-		// so they render here too - the option registration/whitelisting stays in
-		// the one group instead of a second, separate one.
-		add_settings_section(
-			'chat_script_main_section',
-			__('Chat Script Settings', 'gendox-ai-agent'),
-			null,
-			'chat-script-settings'
-		);
-		add_settings_field(
-			'gendox_chat_script_url',
-			__('Chat Script URL', 'gendox-ai-agent'),
-			array($this, 'chat_script_url_field_callback'),
-			'chat-script-settings',
-			'chat_script_main_section'
-		);
-		add_settings_field(
-			'gendox_api_base_url',
-			__('Gendox API Base URL', 'gendox-ai-agent'),
-			array($this, 'api_base_url_field_callback'),
-			'chat-script-settings',
-			'chat_script_main_section'
-		);
-
-		add_settings_section(
-			'chat_script_widget_section',
-			__('Widget Options', 'gendox-ai-agent'),
-			array($this, 'widget_options_section_callback'),
-			'chat-script-settings'
-		);
-		$this->add_widget_option_fields('chat-script-settings', 'chat_script_widget_section');
-	}
-
-
 	public function chat_script_url_field_callback()
 	{
 		$chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL);
@@ -294,9 +218,6 @@ class Gendox_AI_Agent_Settings
 
 	/**
 	 * Register the five widget-option fields on a settings page/section.
-	 *
-	 * Shared by the main settings screen and the hidden Chat Script Settings page so both
-	 * stay in sync (same gotcha as the URL fields).
 	 *
 	 * @param string $page    Settings page slug.
 	 * @param string $section Section id.
@@ -342,16 +263,15 @@ class Gendox_AI_Agent_Settings
 	}
 
 	/**
-	 * Register a widget option under both settings groups that can save it.
+	 * Register a widget option under the settings group that saves it.
 	 *
-	 * @param string $option            Option name.
-	 * @param array  $sanitize_callback Settings API args including sanitize_callback.
+	 * @param string $option Option name.
+	 * @param array  $args   Settings API args including sanitize_callback.
 	 * @return void
 	 */
 	private function register_widget_option($option, $args)
 	{
 		register_setting('gendox_ai_chat_settings_group', $option, $args);
-		register_setting('gendox_api_settings_group', $option, $args);
 	}
 
 	/**
@@ -497,14 +417,8 @@ class Gendox_AI_Agent_Settings
 
 		// API Settings section, rendered on the same page and saved by the same form as the
 		// API key above, so the screen has one Save button.
-		//
-		// Both options stay registered under 'gendox_api_settings_group' as well: the hidden
-		// Chat Script Settings page still submits that group, and options.php only accepts
-		// values whitelisted for the group being saved.
 		register_setting('gendox_ai_chat_settings_group', 'gendox_chat_script_url', array('sanitize_callback' => 'esc_url_raw'));
 		register_setting('gendox_ai_chat_settings_group', 'gendox_api_base_url', array('sanitize_callback' => 'esc_url_raw'));
-		register_setting('gendox_api_settings_group', 'gendox_chat_script_url', array('sanitize_callback' => 'esc_url_raw'));
-		register_setting('gendox_api_settings_group', 'gendox_api_base_url', array('sanitize_callback' => 'esc_url_raw'));
 		add_settings_section(
 			'gendox_api_main_section',
 			__('API Settings', 'gendox-ai-agent'),

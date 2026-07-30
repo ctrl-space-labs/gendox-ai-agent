@@ -27,8 +27,7 @@ Full setup walkthrough: [docs.gendox.dev/website-widget/wordpress-plugin](https:
 ## Configuration
 
 Both URLs default to `https://app.gendox.dev` and only need changing if you self-host
-Gendox. They can be edited under **Gendox AI Chat → API Settings**, or on the hidden page
-at `/wp-admin/admin.php?page=chat-script-settings`.
+Gendox. They can be edited under **Gendox AI Chat → API Settings**.
 
 | Setting | Used for |
 |---|---|

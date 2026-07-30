@@ -141,19 +141,18 @@ multisite handling, all of these need addressing together:
 
 ## Gotchas
 
-**Two settings pages edit the same options.** The **API Settings** section on the main
-screen and the hidden page at `/wp-admin/admin.php?page=chat-script-settings` both render
-the same two URL fields and both save through `gendox_api_settings_group`. If you add a
-field to one, add it to the other, and register the option **once** in
-`register_settings()`. Registering a field whose `name` differs from the registered option
-makes WordPress silently discard the value on save — that bug shipped and went unnoticed
-for several releases.
+**The settings screen is one page, one form.** The API key, the two URL fields, and the
+widget options all register under the single `gendox_ai_chat_settings_group` and save
+together with one Save button — there used to be a second, hidden page
+(`chat-script-settings`) duplicating the URL fields under a separate option group, but it
+was removed once the URL fields moved onto the main screen; don't recreate it. Registering
+a field whose `name` differs from the registered option makes WordPress silently discard
+the value on save — that bug shipped once already, keep it in mind if this page is split
+again.
 
-**The settings screen is one page with two forms, not tabs.** `options.php` saves exactly
-one option group per submit, so the API key (`gendox_ai_chat_settings_group`) and the URL
-fields (`gendox_api_settings_group`) each keep their own form and Save button. The projects
-section renders **outside** both forms — it is AJAX-driven rather than Settings API driven,
-and its modals contain their own `<form>` elements, which would otherwise nest.
+The projects section renders **outside** that form — it is AJAX-driven rather than
+Settings API driven, and its modals contain their own `<form>` elements, which would
+otherwise nest.
 
 **The widget `<script>` is raw HTML, not an enqueued asset.** It is echoed directly in
 `wp_footer`, so it has no handle and nothing can declare a dependency on it. This
