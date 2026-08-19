@@ -573,7 +573,11 @@ class Gendox_AI_Agent_Settings
 					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_ai_chat_main_section');
 					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_api_main_section');
 					$this->render_settings_section('gendox-ai-chat-settings', 'gendox_widget_options_section');
-					submit_button();
+					?>
+				<div class="submit">
+					<button type="submit" class="btn btn-primary"><?php esc_html_e( 'Save Changes', 'gendox-ai-agent' ); ?></button>
+				</div>
+				<?php
 					?>
 				</div>
 			</form>
@@ -582,14 +586,22 @@ class Gendox_AI_Agent_Settings
 				<?php $this->render_settings_section('gendox-ai-chat-wp-settings', 'gendox_projects_section'); ?>
 			</div>
 
-			<!-- Gendox app panel. Sizing/framing lives in backend-styles.css -->
-			<div class="gendox-app-frame">
-				<?php $chat_script_url = get_option('gendox_chat_script_url', GENDOX_DEFAULT_URL); ?>
-				<!-- Trailing slash is required: the app redirects /login-prompt to
-				     /login-prompt/, and some deployments answer with an absolute http://
-				     Location, which a browser blocks as mixed content inside an https admin
-				     page. Requesting the canonical URL avoids the redirect entirely. -->
-				<iframe src="<?php echo esc_url(rtrim($chat_script_url, '/') . '/login-prompt/'); ?>" allowfullscreen></iframe>
+			<div class="gendox-panel gendox-open-app">
+				<?php
+				global $wpdb;
+				$gendox_url  = rtrim( (string) get_option( 'gendox_chat_script_url', GENDOX_DEFAULT_URL ), '/' );
+				$org_row     = $wpdb->get_row( "SELECT organizationId FROM {$wpdb->prefix}gendox_projects LIMIT 1" );
+				$org_id      = $org_row ? $org_row->organizationId : '';
+				$open_url    = $gendox_url . '/gendox/home/';
+				if ( $org_id ) {
+					$open_url = add_query_arg( 'organizationId', rawurlencode( $org_id ), $open_url );
+				}
+				?>
+				<h3 class="gendox-panel-title"><?php esc_html_e( 'Gendox App', 'gendox-ai-agent' ); ?></h3>
+				<p><?php esc_html_e( 'Configure agents, documents, and chat behaviour in the Gendox app. WordPress keeps your API key, content assignment, and where the widget appears.', 'gendox-ai-agent' ); ?></p>
+				<p>
+					<a class="btn btn-primary" href="<?php echo esc_url( $open_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open Gendox', 'gendox-ai-agent' ); ?></a>
+				</p>
 			</div>
 		</div>
 	<?php

@@ -149,6 +149,12 @@ class Gendox_API_Endpoints
             return new WP_REST_Response(['message' => 'Content not found.'], 404);
         }
 
+        // Only published content that an admin assigned to a Gendox project — a valid
+        // API key alone must not unlock arbitrary drafts/private/unassigned posts.
+        if ('publish' !== $post->post_status || !$this->is_content_assigned($content_id)) {
+            return new WP_REST_Response(['message' => 'Content not available.'], 403);
+        }
+
         $product = ('product' === $post->post_type && function_exists('wc_get_product'))
             ? wc_get_product($post)
             : false;
@@ -164,6 +170,49 @@ class Gendox_API_Endpoints
         );
 
         return new WP_REST_Response($content_data, 200);
+    }
+
+    /**
+     * Whether a post/page/product ID is assigned to at least one local Gendox project.
+     *
+     * @param int $content_id
+     * @return bool
+     */
+    private function is_content_assigned($content_id)
+    {
+        global $wpdb;
+
+        $content_id = (int) $content_id;
+        if ($content_id <= 0) {
+            return false;
+        }
+
+        $table_name = $wpdb->prefix . 'gendox_projects';
+        $projects = $wpdb->get_results("SELECT postIds FROM $table_name");
+
+        if (empty($projects)) {
+            return false;
+        }
+
+        foreach ($projects as $project) {
+            $assigned_items = maybe_unserialize($project->postIds);
+            if (!is_array($assigned_items)) {
+                continue;
+            }
+
+            foreach (array('posts', 'products', 'pages') as $type) {
+                if (empty($assigned_items[$type]) || !is_array($assigned_items[$type])) {
+                    continue;
+                }
+
+                $ids = array_map('intval', $assigned_items[$type]);
+                if (in_array($content_id, $ids, true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

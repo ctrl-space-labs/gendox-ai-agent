@@ -13,7 +13,7 @@ pages and products, then serve it as a chat widget on the pages you choose.
 |---|---|
 | **Chat widget** | Injects the Gendox widget on the public site, scoped to the post types and taxonomies you assign to each Gendox project. |
 | **Content sync** | Exposes read-only REST routes under `/wp-json/gendox/v1/` so Gendox can pull your content in for training. |
-| **Admin UI** | Enter your API key, map Gendox projects to WordPress content, and work with the Gendox app embedded directly in wp-admin. |
+| **Admin UI** | Enter your API key, map Gendox projects to WordPress content, and open the Gendox app in a new tab for agent configuration. |
 
 ## Install
 
@@ -31,7 +31,7 @@ Gendox. They can be edited under **Gendox AI Chat → API Settings**.
 
 | Setting | Used for |
 |---|---|
-| Chat Script URL | Serving the widget SDK and the embedded admin app. |
+| Chat Script URL | Serving the widget SDK; also used by the Open Gendox button. |
 | Gendox API Base URL | Server-side API calls (connection test, integration status). |
 
 These are deliberately separate settings and may point at different hosts.

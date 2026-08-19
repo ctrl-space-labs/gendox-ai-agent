@@ -243,21 +243,6 @@ properties to keep future tweaks in one place.
     outline: none;
 }
 
-/* WordPress' own primary button, used by submit_button() */
-.toplevel_page_gendox-ai-chat-settings .wrap .button-primary {
-    background: var(--gendox-primary);
-    border-color: var(--gendox-primary-dark);
-    color: #fff;
-    text-shadow: none;
-    box-shadow: none;
-}
-
-.toplevel_page_gendox-ai-chat-settings .wrap .button-primary:hover,
-.toplevel_page_gendox-ai-chat-settings .wrap .button-primary:focus {
-    background: var(--gendox-primary-dark);
-    border-color: var(--gendox-primary-dark);
-    color: #fff;
-}
 
 #saveProjectChanges,
 #saveChatSettings {
@@ -473,26 +458,7 @@ properties to keep future tweaks in one place.
     margin-bottom: 5px;
 }
 
-/*----------------- Embedded Gendox app panel -----------------*/
-/* Replaces the old 16:9 padding-top hack: the embedded app is a full UI that
-   needs height, not a video aspect ratio, which letterboxed it into a strip
-   with its own inner scrollbar. */
-.gendox-app-frame {
-    margin-top: 20px;
-    min-height: 70vh;
-    border: 1px solid var(--gendox-border);
-    border-radius: var(--gendox-radius);
-    box-shadow: var(--gendox-shadow);
-    overflow: hidden;
-    background-color: var(--gendox-surface-subtle);
-}
-
-.gendox-app-frame iframe {
-    display: block;
-    width: 100%;
-    min-height: 70vh;
-    border: none;
-}
+/*----------------- Open Gendox panel -----------------*/
 
 /*----------------- Settings form styling -----------------*/
 /* Was scoped to #api-settings, the old tab pane id. The tabs are gone, so this now

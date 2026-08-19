@@ -37,7 +37,7 @@ assistant does the rest.
 * Train your AI agent on posts, pages, and WooCommerce products
 * Choose exactly which post types and taxonomies display the chatbot
 * Run multiple AI agents, each trained on a different set of content
-* Manage everything from the WordPress admin — the Gendox app is embedded directly in your dashboard
+* Manage API key, content assignment, and chat placement from the WordPress admin — open the Gendox app in a new tab for agent configuration
 * Works with any theme
 * Developer-friendly: register browser-side tools and page context so the agent can act on your site
 
@@ -128,12 +128,15 @@ extra page context with each message. See the
 
 1. AI Chat Settings — connect your site with a Gendox API key
 2. WordPress Settings — assign posts, pages and products to an AI agent
-3. The Gendox app embedded in the WordPress dashboard
+3. Open Gendox from the settings page (opens in a new tab)
 4. The AI chat widget on the front end
 
 == Changelog ==
 
 = 1.0.5: July 30, 2026 =
+* Remove the Gendox app iframe from wp-admin; settings now include an Open Gendox button that opens the app in a new tab
+* Upgrade Select2 to 4.1.0 and Bootstrap to 5.3.8
+* Restrict the /content REST endpoint so a valid API key can only fetch published posts, pages, or products that are assigned to a Gendox project
 * Fix saving a new API key leaving the Gendox integration inactive until the plugin was deactivated and reactivated. Reload Content and other sync actions now work after the first Save
 * Clearing the API key still marks the integration inactive; saving a key when none was stored (or after a clear) now marks it active
 * WooCommerce products are returned to Gendox as structured HTML (title, price, SKU, stock, categories, short description, description, and image URLs), not only the long description

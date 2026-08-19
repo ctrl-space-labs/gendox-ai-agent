@@ -15,7 +15,7 @@ need this file — see the [`gendox-wordpress-integration`](https://docs.gendox.
 2. **Exposes a read-only REST API** (`/wp-json/gendox/v1/…`) so Gendox can pull WordPress
    content in for training.
 3. **Provides an admin UI** to enter the API key, map Gendox projects to WordPress
-   content, and embed the Gendox app itself in an iframe.
+   content, and open the Gendox app in a new tab.
 
 ## Layout
 
@@ -39,7 +39,7 @@ Columns: `id`, `organizationId`, `gendoxId`, `name`, `description`, `postIds` (l
 | Option | Meaning |
 |---|---|
 | `gendox_ai_chat_api_key` | Gendox API key. Stored plaintext (see Known issues). |
-| `gendox_chat_script_url` | Gendox instance serving the widget SDK and the admin iframe. |
+| `gendox_chat_script_url` | Gendox instance serving the widget SDK and the Open Gendox button target. |
 | `gendox_api_base_url` | Gendox instance for server-side API calls. **Separate on purpose** — do not merge these two; real installs point them at different hosts. |
 | `gendox_ai_chat_positions_{projectId}` | Serialized `post_type` / `taxonomies` array deciding which pages show that project's widget. |
 

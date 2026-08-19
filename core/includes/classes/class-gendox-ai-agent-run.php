@@ -137,8 +137,8 @@ class Gendox_AI_Agent_Run
 
 		// enqueue select2 (bundled locally - wordpress.org does not allow loading
 		// executable assets from third-party CDNs)
-		wp_enqueue_style('select2', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/select2/select2.min.css', array(), '4.1.0-rc.0');
-		wp_enqueue_script('select2', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/select2/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
+		wp_enqueue_style('select2', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/select2/select2.min.css', array(), '4.1.0');
+		wp_enqueue_script('select2', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/select2/select2.min.js', array('jquery'), '4.1.0', true);
 	}
 
 	/**
@@ -176,8 +176,9 @@ class Gendox_AI_Agent_Run
 		    strpos($screen->id, 'gendox-ai-chat-settings') !== false) {
 			// Enqueue Bootstrap only on this page. Bundled locally - wordpress.org does
 			// not allow loading executable assets from third-party CDNs.
-			wp_enqueue_style('bootstrap-css', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/bootstrap/bootstrap.min.css', array(), '4.5.2');
-			wp_enqueue_script('bootstrap-js', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/bootstrap/bootstrap.bundle.min.js', array('jquery'), '4.5.2', true);
+			// Bootstrap 5's bundle does not depend on jQuery (Select2 still does).
+			wp_enqueue_style('bootstrap-css', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/bootstrap/bootstrap.min.css', array(), '5.3.8');
+			wp_enqueue_script('bootstrap-js', GENDOX_PLUGIN_URL . 'core/includes/assets/vendor/bootstrap/bootstrap.bundle.min.js', array(), '5.3.8', true);
 		}
 	}
 
