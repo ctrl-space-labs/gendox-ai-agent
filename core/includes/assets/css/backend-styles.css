@@ -104,6 +104,46 @@ properties to keep future tweaks in one place.
     border-radius: var(--gendox-radius);
 }
 
+.toplevel_page_gendox-ai-chat-settings .gendox-settings-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 12px 0 16px;
+    padding: 12px 16px;
+    background: rgba(8, 182, 141, 0.08);
+    border: 1px solid rgba(8, 182, 141, 0.28);
+    border-left: 4px solid var(--gendox-primary);
+    border-radius: var(--gendox-radius);
+}
+
+.toplevel_page_gendox-ai-chat-settings .gendox-settings-intro .dashicons {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    color: var(--gendox-primary);
+}
+
+.toplevel_page_gendox-ai-chat-settings .gendox-settings-intro p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--gendox-text);
+}
+
+.toplevel_page_gendox-ai-chat-settings .gendox-settings-intro a {
+    font-weight: 600;
+    color: var(--gendox-primary-dark);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.toplevel_page_gendox-ai-chat-settings .gendox-settings-intro a:hover,
+.toplevel_page_gendox-ai-chat-settings .gendox-settings-intro a:focus {
+    color: var(--gendox-primary);
+}
+
 /* Sections stack inside one panel, so separate all but the first. */
 .toplevel_page_gendox-ai-chat-settings .gendox-panel .gendox-panel-title + * {
     margin-top: 0;

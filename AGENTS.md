@@ -183,6 +183,30 @@ Useful checks before finishing:
 find . -name '*.php' -not -path './.git/*' -exec php -l {} \;
 ```
 
+## Releasing to wordpress.org
+
+This repo is **public**. Never commit SVN passwords, API keys, or other secrets — only
+GitHub Actions secrets (`SVN_USERNAME`, `SVN_PASSWORD`). The plugin API key belongs in
+WordPress options on each site, not in git.
+
+**Source of truth is GitHub.** WordPress.org is Subversion-only for the directory listing.
+`.github/workflows/deploy-wordpress.yml` deploys on a tag matching `vMAJOR.MINOR.PATCH`
+(e.g. `v1.0.6`; skips `v1.0.6-alpha`). It can also be run manually for an existing tag.
+The Action strips the leading `v`, so SVN gets `tags/1.0.6` while git keeps `v1.0.6`.
+`.distignore` (mirrored in `bin/build-release-zip.sh`) keeps `.github`, `.wordpress-org`,
+`bin`, `builds`, and similar out of the shipped zip.
+
+**Directory assets** (banner, icon, screenshots) live in `.wordpress-org/` in this repo.
+They are not part of the plugin zip; the deploy Action copies them to SVN `assets/`.
+Screenshot captions in `readme.txt` (`== Screenshots ==`) must stay numbered in lockstep
+with `screenshot-1.png`, `screenshot-2.png`, ….
+
+**Release checklist:** bump `Version` / `GENDOX_VERSION` / `Stable tag` + changelog →
+commit → `git tag vX.Y.Z` → push the tag. Do not reuse an SVN tag; ship a new version
+instead. Assets-only updates still need a new Stable tag if you change `readme.txt`, or
+use a dedicated assets deploy — prefer a normal version bump so trunk and the stable tag
+stay aligned.
+
 ## Known issues (unfixed — see readme/publishing notes)
 
 - `add_submenu_page(null, …)` is deprecated on PHP 8.1+.

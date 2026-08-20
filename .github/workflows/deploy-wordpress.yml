@@ -27,7 +27,7 @@ jobs:
 
           # Only release tags: vMAJOR.MINOR.PATCH (digits only). Skip alphas/betas/RCs.
           if [[ ! "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Skipping SVN deploy: '$REF' is not vMAJOR.MINOR.PATCH (e.g. v1.0.5)."
+            echo "Skipping SVN deploy: '$REF' is not vMAJOR.MINOR.PATCH (e.g. v1.0.6)."
             echo "deploy=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi

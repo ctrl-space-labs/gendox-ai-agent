@@ -5,7 +5,7 @@ Tags: ai, chatbot, ai agent, ai assistant, customer support
 Requires at least: 5.8
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,6 +132,11 @@ extra page context with each message. See the
 4. The AI chat widget on the front end
 
 == Changelog ==
+
+= 1.0.6: August 20, 2026 =
+* Add a Getting Started documentation link under the settings page title
+* Add WordPress.org directory banner and icon assets
+* Minor bugfixes
 
 = 1.0.5: July 30, 2026 =
 * Remove the Gendox app iframe from wp-admin; settings now include an Open Gendox button that opens the app in a new tab

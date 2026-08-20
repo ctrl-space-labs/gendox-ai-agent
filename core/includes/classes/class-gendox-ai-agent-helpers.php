@@ -42,12 +42,13 @@ class Gendox_AI_Agent_Helpers {
 	 * Takes both as arguments so it can act on a key that is not the stored one - the API
 	 * key change flow has to reach the outgoing organization before the new key is saved.
 	 *
-	 * @param string $api_key
-	 * @param string $organization_id
-	 * @param string $status 'ACTIVE' or 'INACTIVE'
+	 * @param string      $api_key
+	 * @param string      $organization_id
+	 * @param string      $status 'ACTIVE' or 'INACTIVE'
+	 * @param string|null $failure_detail Optional. Filled with a redacted reason on failure.
 	 * @return bool True when the API accepted the change.
 	 */
-	public static function send_integration_status( $api_key, $organization_id, $status ) {
+	public static function send_integration_status( $api_key, $organization_id, $status, &$failure_detail = null ) {
 		$api_base_url = get_option( 'gendox_api_base_url', GENDOX_DEFAULT_URL );
 		$url          = rtrim( $api_base_url, '/' ) . '/gendox/api/v1/organizations/' . rawurlencode( $organization_id ) . '/websites/integration';
 
@@ -72,19 +73,29 @@ class Gendox_AI_Agent_Helpers {
 		);
 
 		if ( is_wp_error( $response ) ) {
+			$failure_detail = 'transport error: ' . $response->get_error_message();
 			return false;
 		}
 
-		return 200 === (int) wp_remote_retrieve_response_code( $response );
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $code ) {
+			$body           = self::redact_secrets( (string) wp_remote_retrieve_body( $response ) );
+			$failure_detail = sprintf( 'HTTP %d%s', $code, $body !== '' ? ': ' . $body : '' );
+			return false;
+		}
+
+		$failure_detail = null;
+		return true;
 	}
 
 	/**
 	 * Fetches the organization ID using the API key.
 	 *
-	 * @param string $api_key API Key
+	 * @param string      $api_key API Key
+	 * @param string|null $failure_detail Optional. Filled with a redacted reason on failure.
 	 * @return string|null Organization ID or null on failure
 	 */
-	public static function get_organization_id( $api_key ) {
+	public static function get_organization_id( $api_key, &$failure_detail = null ) {
 		// Create an instance of the settings class
 		$settings = new Gendox_AI_Agent_Settings();
 
@@ -94,16 +105,52 @@ class Gendox_AI_Agent_Helpers {
 		$body      = $response[1];
 
 		if ( 200 !== $http_code ) {
+			$failure_detail = sprintf(
+				'profile HTTP %d%s',
+				$http_code,
+				$body !== '' ? ': ' . self::redact_secrets( (string) $body ) : ''
+			);
 			return null;
 		}
 
 		$data = json_decode( $body, true );
 
 		if ( ! isset( $data['organizations'][0]['id'] ) ) {
+			$failure_detail = 'profile response had no organizations[0].id';
 			return null;
 		}
 
+		$failure_detail = null;
 		return $data['organizations'][0]['id'];
+	}
+
+	/**
+	 * Writes a diagnostic line to the PHP error log without ever including API keys.
+	 *
+	 * @param string $message Message; any gxsk-… tokens are redacted before logging.
+	 * @return void
+	 */
+	public static function log_error( $message ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- intentional server-side diagnostic.
+		error_log( '[Gendox AI Agent] ' . self::redact_secrets( (string) $message ) );
+	}
+
+	/**
+	 * Strips API key material from a string before it is logged.
+	 *
+	 * @param string $text
+	 * @return string
+	 */
+	public static function redact_secrets( $text ) {
+		$text = (string) $text;
+		// Gendox secret keys (gxsk-…) and any x-api-key style bearer blobs in JSON/text dumps.
+		$text = preg_replace( '/gxsk-[A-Za-z0-9]+/', '[REDACTED_API_KEY]', $text );
+		$text = preg_replace(
+			'/(["\']?(?:api[_-]?key|x-api-key)["\']?\s*[:=]\s*["\']?)[^"\'\s,&}]+/i',
+			'$1[REDACTED_API_KEY]',
+			$text
+		);
+		return $text;
 	}
 
 	/**

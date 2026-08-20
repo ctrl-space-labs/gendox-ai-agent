@@ -108,12 +108,16 @@ class Gendox_AI_Agent_Settings
 			return $new_value;
 		}
 
-		$new_organization_id = Gendox_AI_Agent_Helpers::get_organization_id($new_value);
+		$profile_detail      = null;
+		$new_organization_id = Gendox_AI_Agent_Helpers::get_organization_id($new_value, $profile_detail);
 		if (!$new_organization_id) {
+			Gendox_AI_Agent_Helpers::log_error(
+				'API key not saved: Gendox did not accept the key or returned no organization. ' . (string) $profile_detail
+			);
 			add_settings_error(
 				'gendox_ai_chat_api_key',
 				'gendox_api_key_invalid',
-				__('The API key was not accepted by Gendox. The previous key has been kept.', 'gendox-ai-agent')
+				self::api_key_change_admin_message('invalid', $profile_detail)
 			);
 			return $old_value;
 		}
@@ -125,11 +129,19 @@ class Gendox_AI_Agent_Settings
 		// First key, or re-adding after clear: activate — previously this returned early and
 		// left the integration inactive until a plugin deactivate/reactivate.
 		if (!$old_organization_id) {
-			if (!Gendox_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE')) {
+			$activate_detail = null;
+			if (!Gendox_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE', $activate_detail)) {
+				Gendox_AI_Agent_Helpers::log_error(
+					sprintf(
+						'API key not saved: could not activate integration for organization %s. %s',
+						$new_organization_id,
+						(string) $activate_detail
+					)
+				);
 				add_settings_error(
 					'gendox_ai_chat_api_key',
 					'gendox_activate_failed',
-					__('Could not activate the integration for the new organization. The API key has not been changed.', 'gendox-ai-agent')
+					self::api_key_change_admin_message('activate', $activate_detail)
 				);
 				return $old_value;
 			}
@@ -141,27 +153,130 @@ class Gendox_AI_Agent_Settings
 			return $new_value;
 		}
 
-		if (!Gendox_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE')) {
+		$deactivate_detail = null;
+		if (!Gendox_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'INACTIVE', $deactivate_detail)) {
+			Gendox_AI_Agent_Helpers::log_error(
+				sprintf(
+					'API key not saved: could not deactivate integration for organization %s. %s',
+					$old_organization_id,
+					(string) $deactivate_detail
+				)
+			);
 			add_settings_error(
 				'gendox_ai_chat_api_key',
 				'gendox_deactivate_failed',
-				__('Could not deactivate the integration for the current organization. The API key has not been changed.', 'gendox-ai-agent')
+				self::api_key_change_admin_message('deactivate', $deactivate_detail)
 			);
 			return $old_value;
 		}
 
-		if (!Gendox_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE')) {
+		$activate_detail = null;
+		if (!Gendox_AI_Agent_Helpers::send_integration_status($new_value, $new_organization_id, 'ACTIVE', $activate_detail)) {
 			// Put the outgoing organization back, so a failed switch leaves nothing deactivated.
 			Gendox_AI_Agent_Helpers::send_integration_status($old_value, $old_organization_id, 'ACTIVE');
+			Gendox_AI_Agent_Helpers::log_error(
+				sprintf(
+					'API key not saved: could not activate integration for organization %s after deactivating %s. %s',
+					$new_organization_id,
+					$old_organization_id,
+					(string) $activate_detail
+				)
+			);
 			add_settings_error(
 				'gendox_ai_chat_api_key',
 				'gendox_activate_failed',
-				__('Could not activate the integration for the new organization. The API key has not been changed.', 'gendox-ai-agent')
+				self::api_key_change_admin_message('activate', $activate_detail)
 			);
 			return $old_value;
 		}
 
 		return $new_value;
+	}
+
+	/**
+	 * User-facing notice for a blocked API key save.
+	 *
+	 * Prefer the API's errorMessage (4xx bodies always include one). Optional per-code
+	 * overrides win when set; otherwise fall back to a context default. Never includes the key.
+	 *
+	 * @param string      $context 'invalid'|'activate'|'deactivate'
+	 * @param string|null $failure_detail Redacted transport/HTTP detail from Helpers.
+	 * @return string
+	 */
+	private static function api_key_change_admin_message($context, $failure_detail)
+	{
+		$parsed        = self::parse_gendox_api_error($failure_detail);
+		$error_code    = $parsed['errorCode'];
+		$error_message = $parsed['errorMessage'];
+
+		// Optional overrides for specific Gendox error codes. Leave empty to use the API
+		// errorMessage; add an entry to replace it for that code only.
+		$overrides = array(
+			// 'MAX_INTEGRATIONS_REACHED' => __( '…', 'gendox-ai-agent' ),
+		);
+
+		if ($error_code && isset($overrides[$error_code])) {
+			return $overrides[$error_code];
+		}
+
+		if (is_string($error_message) && $error_message !== '') {
+			return esc_html($error_message);
+		}
+
+		if ('invalid' === $context) {
+			return __('The API key was not accepted by Gendox. The previous key has been kept.', 'gendox-ai-agent');
+		}
+
+		if ('deactivate' === $context) {
+			return __('Could not deactivate the integration for the current organization. The API key has not been changed.', 'gendox-ai-agent');
+		}
+
+		return __('Could not activate the integration for the new organization. The API key has not been changed.', 'gendox-ai-agent');
+	}
+
+	/**
+	 * Parses errorCode / errorMessage from a Helpers failure detail that may embed JSON.
+	 *
+	 * @param string|null $failure_detail
+	 * @return array{errorCode: ?string, errorMessage: ?string}
+	 */
+	private static function parse_gendox_api_error($failure_detail)
+	{
+		$empty = array(
+			'errorCode'    => null,
+			'errorMessage' => null,
+		);
+
+		if (!is_string($failure_detail) || $failure_detail === '') {
+			return $empty;
+		}
+
+		if (!preg_match('/\{.*\}/s', $failure_detail, $matches)) {
+			return $empty;
+		}
+
+		$data = json_decode($matches[0], true);
+		if (!is_array($data)) {
+			return $empty;
+		}
+
+		$code = null;
+		if (!empty($data['errorCode']) && is_string($data['errorCode'])) {
+			$code = $data['errorCode'];
+		}
+
+		$message = null;
+		if (!empty($data['errorMessage']) && is_string($data['errorMessage'])) {
+			$message = trim($data['errorMessage']);
+			if ($message === '') {
+				$message = null;
+			}
+		}
+
+		return array(
+			'errorCode'    => $code,
+			'errorMessage' => $message,
+		);
 	}
 
 	/**
@@ -560,9 +675,37 @@ class Gendox_AI_Agent_Settings
 	 */
 	public function settings_page_content()
 	{
+		$docs_url = 'https://docs.gendox.dev/website-widget/wordpress-plugin';
 	?>
 		<div class="wrap">
 			<h1><?php echo esc_html(__('Gendox AI Chat Settings', 'gendox-ai-agent')); ?></h1>
+			<div class="gendox-settings-intro">
+				<span class="dashicons dashicons-book-alt" aria-hidden="true"></span>
+				<p>
+					<?php
+					echo wp_kses(
+						sprintf(
+							/* translators: %s: URL to the WordPress plugin Getting Started documentation */
+							__('New here? See the <a href="%s" target="_blank" rel="noopener noreferrer">Getting Started guide</a>.', 'gendox-ai-agent'),
+							esc_url($docs_url)
+						),
+						array(
+							'a' => array(
+								'href'   => true,
+								'target' => true,
+								'rel'    => true,
+							),
+						)
+					);
+					?>
+				</p>
+			</div>
+			<?php
+			// Custom menu pages do not load options-head.php, so Settings API notices
+			// (including API key save failures stored across the options.php redirect) must
+			// be printed here.
+			settings_errors();
+			?>
 
 			<form method="post" action="options.php">
 				<?php settings_fields('gendox_ai_chat_settings_group'); ?>
