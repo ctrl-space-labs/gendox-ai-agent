@@ -36,9 +36,11 @@ rm -f "$ZIP_PATH"
 # Prefer .distignore when present; always drop VCS/IDE/dev-only paths.
 RSYNC_EXCLUDES=(
 	--exclude='.git'
+	--exclude='.github'
 	--exclude='.idea'
 	--exclude='.DS_Store'
 	--exclude='**/.DS_Store'
+	--exclude='.wordpress-org'
 	--exclude='AGENTS.md'
 	--exclude='.gitignore'
 	--exclude='.distignore'
