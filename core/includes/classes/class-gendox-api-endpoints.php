@@ -230,6 +230,9 @@ class Gendox_API_Endpoints
      * shortcode generates, and left encoded payloads — Avada's base64 Code Block — as
      * raw noise.
      *
+     * A shortcode that throws falls back to the stripped content rather than failing the
+     * request — see `render_the_content()`.
+     *
      * @param WP_Post $post
      * @return string
      */
@@ -246,13 +249,51 @@ class Gendox_API_Endpoints
          */
         $render = (bool) apply_filters('gendox_render_shortcodes', true, $post);
 
-        $raw = $render ? $post->post_content : strip_shortcodes($post->post_content);
+        if ($render) {
+            $content = $this->render_the_content($post, $post->post_content);
 
-        $content = $this->with_post_context($post, function () use ($raw) {
-            return apply_filters('the_content', $raw);
-        });
+            if (null !== $content) {
+                return $this->clean_rendered_html($content);
+            }
+            // A shortcode threw. Fall through and retry with them stripped, so one broken
+            // third-party callback costs the shortcode output rather than the whole post.
+        }
 
-        return $this->clean_rendered_html($content);
+        $stripped = strip_shortcodes($post->post_content);
+        $content = $this->render_the_content($post, $stripped);
+
+        // Both passes threw: the filters themselves are broken, so send the raw text.
+        return $this->clean_rendered_html(null === $content ? $stripped : $content);
+    }
+
+    /**
+     * `the_content` over `$raw` with `$post` in context, or null when it threw.
+     *
+     * Rendering runs third-party shortcode callbacks, and up to 1.0.6 building content
+     * could not fail. A throw here must not turn a whole `/content` fetch into a 500 and
+     * leave the post permanently unsynced, so it is caught and reported as no result.
+     *
+     * @param WP_Post $post
+     * @param string  $raw
+     * @return string|null
+     */
+    private function render_the_content($post, $raw)
+    {
+        try {
+            return $this->with_post_context($post, function () use ($raw) {
+                return apply_filters('the_content', $raw);
+            });
+        } catch (Throwable $e) {
+            Gendox_AI_Agent_Helpers::log_error(sprintf(
+                'the_content threw while building content for post %d: %s in %s:%d',
+                (int) $post->ID,
+                $e->getMessage(),
+                $e->getFile(),
+                $e->getLine()
+            ));
+
+            return null;
+        }
     }
 
     /**

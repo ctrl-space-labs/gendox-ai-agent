@@ -211,8 +211,13 @@ stay aligned.
 ## Content rendering (`/gendox/v1/content`)
 
 Since 1.1.0 shortcodes are **rendered**, not stripped. `build_post_content()` runs
-`with_post_context()` → `apply_filters('the_content')` → `clean_rendered_html()`:
+`render_the_content()` (`with_post_context()` → `apply_filters('the_content')`) →
+`clean_rendered_html()`:
 
+- `render_the_content()` catches `Throwable` and returns null, and `build_post_content()`
+  retries once with shortcodes stripped. Rendering runs third-party callbacks and building
+  content could not fail before 1.1.0, so one broken shortcode must cost its own output,
+  not the whole `/content` fetch. If the stripped pass throws too, the raw text is sent.
 - `with_post_context()` sets the global `$post` (builder shortcodes read it; a REST
   request has none) and restores it in a `finally`, along with the rest of the family
   `setup_postdata()` populates. It also buffers, so a shortcode that prints instead of
