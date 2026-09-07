@@ -922,14 +922,19 @@ class Gendox_AI_Agent_Settings
 		[$http_code, $body] = $this->gendox_get_api_call($api_key);
 
 		if ($http_code === 200) {
-			$response_data = json_decode($body, true); // Decode the response body into an associative array
-			$userName = $response_data['userName']; // Get the username from the response
+			// `userName` is empty under API-key auth — the key belongs to an organization,
+			// not a person — so report the organization the key unlocks.
+			$organization = Gendox_AI_Agent_Helpers::get_first_organization(json_decode($body, true));
+			$name = '';
 
-			if (!empty($userName)) {
-				wp_send_json_success(array('status' => 200, 'username' => $userName));
-			} else {
-				wp_send_json_success(array('status' => 200, 'username' => 'null'));
+			foreach (array('displayName', 'name') as $label) {
+				if (!empty($organization[$label])) {
+					$name = sanitize_text_field($organization[$label]);
+					break;
+				}
 			}
+
+			wp_send_json_success(array('status' => 200, 'organization' => $name));
 		} else {
 			wp_send_json_success(array('status' => $http_code, 'message' => 'Failed to retrieve data'));
 		}

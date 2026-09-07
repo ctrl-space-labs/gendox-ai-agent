@@ -22,6 +22,12 @@ jQuery(document).ready(function ($) {
         // Add a Gendox spinner while loading
         connectionStatus.html('<span class="gendox-spinner" style="display: inline-block; margin-left: 10px;"></span>');
 
+        // .text(), not concatenated .html() — the organization name comes from the API
+        // and must not be rendered as markup.
+        function report(color, text) {
+            connectionStatus.empty().append($('<span/>').css('color', color).text(text));
+        }
+
         $.ajax({
             url: gendox.ajax_url,
             type: 'POST',
@@ -31,18 +37,18 @@ jQuery(document).ready(function ($) {
                 api_key: apiKey
             },
             success: function (response) {
-                if (response.success) {
-                    if (response.data.status == '200') {
-                        connectionStatus.html('<span style="color: green;">✔️ Welcome back, ' + response.data.username + '!</span>');
-                    } else {
-                        connectionStatus.html('<span style="color: red;">❌ Error ' + response.data.status + ': ' + response.data.message + '</span>');
-                    }
+                if (response.success && response.data.status == '200') {
+                    report('green', response.data.organization
+                        ? '✔️ Connected to ' + response.data.organization
+                        : '✔️ Connected');
+                } else if (response.success) {
+                    report('red', '❌ Error ' + response.data.status + ': ' + response.data.message);
                 } else {
-                    connectionStatus.html('<span style="color: red;">❌ Connection Failed</span>');
+                    report('red', '❌ Connection Failed');
                 }
             },
             error: function () {
-                connectionStatus.html('<span style="color: red;">❌ Connection Failed</span>');
+                report('red', '❌ Connection Failed');
             }
         });
     });

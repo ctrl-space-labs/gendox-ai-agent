@@ -218,17 +218,146 @@ class Gendox_API_Endpoints
     /**
      * Rendered content for a regular post/page.
      *
-     * Shortcodes are stripped (their output isn't meaningful outside a live page render)
-     * but `the_content` filters still run, so block/embed HTML structure is preserved.
+     * Shortcodes are executed, not stripped: `the_content` runs `do_shortcode()`, so
+     * Gendox gets the text a visitor reads. Stripping (up to 1.0.6) lost anything a
+     * shortcode generates, and left encoded payloads — Avada's base64 Code Block — as
+     * raw noise.
      *
      * @param WP_Post $post
      * @return string
      */
     private function build_post_content($post)
     {
-        $content = preg_replace('#\[[^\]]+\]#', '', $post->post_content);
+        /**
+         * Filters whether shortcodes are executed when building post/page content.
+         *
+         * Return false to strip them instead (the behaviour up to 1.0.6), for sites where
+         * running shortcode callbacks on every content fetch is too expensive.
+         *
+         * @param bool    $render Whether to render shortcodes. Default true.
+         * @param WP_Post $post   The post being sent to Gendox.
+         */
+        $render = (bool) apply_filters('gendox_render_shortcodes', true, $post);
 
-        return apply_filters('the_content', $content);
+        $raw = $render ? $post->post_content : strip_shortcodes($post->post_content);
+
+        $content = $this->with_post_context($post, function () use ($raw) {
+            return apply_filters('the_content', $raw);
+        });
+
+        return $this->clean_rendered_html($content);
+    }
+
+    /**
+     * Runs a callback with `$target` as the global post.
+     *
+     * Builder shortcodes read the global post and a REST request has none. Restored in a
+     * `finally` so a shortcode that throws cannot leave the global pointing elsewhere.
+     *
+     * @param WP_Post  $target
+     * @param callable $callback
+     * @return string
+     */
+    private function with_post_context($target, $callback)
+    {
+        $previous = isset($GLOBALS['post']) ? $GLOBALS['post'] : null;
+
+        // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restored in finally.
+        $GLOBALS['post'] = $target;
+        setup_postdata($target);
+
+        try {
+            return (string) call_user_func($callback);
+        } finally {
+            if ($previous instanceof WP_Post) {
+                // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring.
+                $GLOBALS['post'] = $previous;
+                setup_postdata($previous);
+            } else {
+                unset($GLOBALS['post']);
+            }
+        }
+    }
+
+    /**
+     * Drops non-content markup from a rendered document.
+     *
+     * Rendered shortcodes can emit `<script>`/`<style>`, and this endpoint returns HTML
+     * straight to Gendox — nothing downstream strips tags — so they go here.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function clean_rendered_html($html)
+    {
+        $html = preg_replace('#<(script|style|noscript|template)\b[^>]*>.*?</\1\s*>#is', '', (string) $html);
+        $html = preg_replace('#<!--.*?-->#s', '', $html);
+
+        return trim($this->decode_text_entities($this->strip_presentational_markup($html)));
+    }
+
+    /**
+     * Reduces page-builder output to its semantic skeleton.
+     *
+     * Builders wrap every element in layout `<div>`s carrying hundreds of CSS custom
+     * properties — on a Fusion page that is roughly three quarters of the payload and
+     * none of it is content. Headings, lists, tables and links survive; presentational
+     * attributes and the wrappers themselves do not.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function strip_presentational_markup($html)
+    {
+        $keep = array('href', 'src', 'alt', 'title', 'colspan', 'rowspan');
+
+        $html = preg_replace_callback(
+            '#<([a-zA-Z][a-zA-Z0-9]*)((?:"[^"]*"|\'[^\']*\'|[^>])*)>#s',
+            function ($tag) use ($keep) {
+                $attributes = '';
+                $pattern = '#([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s"\'>]+)#s';
+
+                if (preg_match_all($pattern, $tag[2], $found, PREG_SET_ORDER)) {
+                    foreach ($found as $attribute) {
+                        if (in_array(strtolower($attribute[1]), $keep, true)) {
+                            $attributes .= ' ' . strtolower($attribute[1]) . '=' . $attribute[2];
+                        }
+                    }
+                }
+
+                return '<' . strtolower($tag[1]) . $attributes . '>';
+            },
+            $html
+        );
+
+        // Wrappers carry nothing once their attributes are gone. Blocks become a line
+        // break so text does not run together; inline spans simply disappear.
+        $html = preg_replace('#</?div>#', "\n", $html);
+        $html = preg_replace('#</?span>#', '', $html);
+
+        $html = preg_replace('#[ \t]+#', ' ', $html);
+
+        return preg_replace('#\n\s*\n\s*\n+#', "\n\n", $html);
+    }
+
+    /**
+     * Decodes entities so the corpus reads "agents & chatbots", not "agents &#038; chatbots".
+     *
+     * Angle brackets are parked around the decode: a page showing `&lt;script&gt;` as
+     * example code must keep it escaped rather than gain a live tag.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function decode_text_entities($html)
+    {
+        $html = preg_replace('/&(?:lt|#0*60|#[xX]0*3[cC]);/', "\0LT\0", (string) $html);
+        $html = preg_replace('/&(?:gt|#0*62|#[xX]0*3[eE]);/', "\0GT\0", $html);
+
+        $html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
+        $html = str_replace("\xc2\xa0", ' ', $html); // Non-breaking spaces.
+
+        return str_replace(array("\0LT\0", "\0GT\0"), array('&lt;', '&gt;'), $html);
     }
 
     /**
@@ -236,7 +365,7 @@ class Gendox_API_Endpoints
      *
      * Real HTML (not pseudo-XML): an `<article>` with semantic children and
      * `gendox-product-*` classes. Description HTML is kept (headings/lists help the
-     * model); shortcodes are stripped because they do not render usefully off-page.
+     * model); shortcodes are stripped, unlike the post/page path.
      * Price display HTML is reduced to plain text — its `<del>`/`<ins>`/spans are
      * storefront chrome, not content structure.
      *
@@ -393,12 +522,15 @@ class Gendox_API_Endpoints
     /**
      * Description / short description: strip shortcodes, keep HTML structure.
      *
+     * Products deliberately do not render, unlike posts and pages. A catalogue can be
+     * large, so the per-fetch cost of running shortcode callbacks multiplies
+     *
      * @param string $html
      * @return string
      */
     private function prepare_product_rich_text($html)
     {
-        return trim(strip_shortcodes((string) $html));
+        return trim($this->clean_rendered_html(strip_shortcodes((string) $html)));
     }
 
     /**

@@ -113,15 +113,31 @@ class Gendox_AI_Agent_Helpers {
 			return null;
 		}
 
-		$data = json_decode( $body, true );
+		$organization = self::get_first_organization( json_decode( $body, true ) );
 
-		if ( ! isset( $data['organizations'][0]['id'] ) ) {
+		if ( empty( $organization['id'] ) ) {
 			$failure_detail = 'profile response had no organizations[0].id';
 			return null;
 		}
 
 		$failure_detail = null;
-		return $data['organizations'][0]['id'];
+		return $organization['id'];
+	}
+
+	/**
+	 * The organization from a decoded `/gendox/api/v1/profile` response.
+	 *
+	 * An API key belongs to an organization rather than a person, and the plugin has
+	 * always keyed off the first one. Central so callers do not each reach into the
+	 * response shape.
+	 *
+	 * @param mixed $profile Decoded profile response.
+	 * @return array<string, mixed> Empty when the response carries none.
+	 */
+	public static function get_first_organization( $profile ) {
+		return isset( $profile['organizations'][0] ) && is_array( $profile['organizations'][0] )
+			? $profile['organizations'][0]
+			: array();
 	}
 
 	/**

@@ -159,9 +159,10 @@ otherwise nest.
 constrains how integrators hook into it — see the [`gendox-wordpress-integration`](https://docs.gendox.dev/skills/gendox-wordpress-integration/SKILL.md) skill.
 
 **Almost no filter hooks exist.** The only other extension points are
-`do_action('GENDOX/plugin_loaded')` and `apply_filters('gendox_product_content_fields', ...)`
+`do_action('GENDOX/plugin_loaded')`, `apply_filters('gendox_product_content_fields', ...)`
 (in `class-gendox-api-endpoints.php`, letting extensions like WooCommerce Subscriptions add
-fields to a product's HTML content block without this plugin knowing about them). Third
+fields to a product's HTML content block without this plugin knowing about them) and
+`apply_filters('gendox_render_shortcodes', ...)` (see Content rendering below). Third
 parties still cannot alter the widget's `data-*` attributes — adding a filter around the
 script attributes would be a genuinely useful, low-risk improvement.
 
@@ -207,8 +208,31 @@ instead. Assets-only updates still need a new Stable tag if you change `readme.t
 use a dedicated assets deploy — prefer a normal version bump so trunk and the stable tag
 stay aligned.
 
+## Content rendering (`/gendox/v1/content`)
+
+Since 1.1.0 shortcodes are **rendered**, not stripped. `build_post_content()` runs
+`with_post_context()` → `apply_filters('the_content')` → `clean_rendered_html()`:
+
+- `with_post_context()` sets the global `$post` first — builder shortcodes read it and a
+  REST request has none — and restores it in a `finally`.
+- `clean_rendered_html()` drops `<script>`/`<style>`/`<noscript>`/`<template>` and
+  comments. Required here: the endpoint returns HTML straight to Gendox and nothing
+  downstream strips tags.
+- `decode_text_entities()` decodes entities but parks `&lt;`/`&gt;`, so example code on a
+  docs page stays escaped.
+
+Products do **not** render: `prepare_product_rich_text()` still calls `strip_shortcodes()`.
+A catalogue multiplies the per-fetch cost, and product shortcodes mostly emit storefront
+chrome (related products, upsells) rather than trainable content. `gendox_render_shortcodes`
+covers the post/page path only.
+
+`apply_filters('gendox_render_shortcodes', true, $post)` returning false restores
+strip-only behaviour.
+
 ## Known issues (unfixed — see readme/publishing notes)
 
-- `add_submenu_page(null, …)` is deprecated on PHP 8.1+.
 - API key is stored in plaintext in `wp_options` (standard for WP plugins, but the readme's
   external-service disclosure should stay accurate about it).
+- Rendering shortcodes on every `/content` fetch runs third-party callbacks, so a fetch is
+  as expensive as a page view. There is no caching layer; a site with heavy shortcodes can
+  turn rendering off with `gendox_render_shortcodes`.

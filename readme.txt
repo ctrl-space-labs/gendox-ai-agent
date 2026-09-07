@@ -5,7 +5,7 @@ Tags: ai, chatbot, ai agent, ai assistant, customer support
 Requires at least: 5.8
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.6
+Stable tag: 1.1.0
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,6 +23,13 @@ chat becomes a way for visitors to get things done, not just find information.
 
 Pick which content trains each agent, pick which pages show the chat widget, and the
 assistant does the rest.
+
+
+= Documentation =
+
+* [The Gendox AI Agent home page](https://gendox.dev/solutions/gendox-ai-plugin-for-wordpress/)
+* [Getting started with the WordPress plugin](https://docs.gendox.dev/website-widget/wordpress-plugin)
+* [Agent skills for AI coding assistants](https://docs.gendox.dev/skills/)
 
 = Why use an AI agent trained on your own content? =
 
@@ -117,6 +124,12 @@ WooCommerce products can be assigned as training content alongside posts and pag
 integration is still new and hasn't been broadly tested yet — if you try it, we'd
 appreciate hearing how it goes.
 
+= Does it work with page builders and shortcodes? =
+
+Yes. Content is rendered the same way `the_content` renders it on the front end, so
+shortcodes and page-builder elements contribute their real output. To turn rendering off
+and strip shortcodes instead, return false from the `gendox_render_shortcodes` filter.
+
 = Can developers extend it? =
 
 Yes. The widget SDK lets you register browser-side tools the agent can call, and supply
@@ -132,6 +145,12 @@ extra page context with each message. See the
 4. The AI chat widget on the front end
 
 == Changelog ==
+
+= 1.1.0: September 8, 2026 =
+* Shortcodes and page-builder elements are now rendered before content is sent to Gendox, instead of being stripped out
+* Fix base64-encoded shortcode payloads, such as Avada's Code Block, being sent as raw base64 text
+* New gendox_render_shortcodes filter to restore the previous strip-only behaviour
+* Test Connection now names the organization the API key belongs to
 
 = 1.0.6: August 20, 2026 =
 * Add a Getting Started documentation link under the settings page title
