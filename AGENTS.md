@@ -213,13 +213,19 @@ stay aligned.
 Since 1.1.0 shortcodes are **rendered**, not stripped. `build_post_content()` runs
 `with_post_context()` → `apply_filters('the_content')` → `clean_rendered_html()`:
 
-- `with_post_context()` sets the global `$post` first — builder shortcodes read it and a
-  REST request has none — and restores it in a `finally`.
-- `clean_rendered_html()` drops `<script>`/`<style>`/`<noscript>`/`<template>` and
-  comments. Required here: the endpoint returns HTML straight to Gendox and nothing
-  downstream strips tags.
-- `decode_text_entities()` decodes entities but parks `&lt;`/`&gt;`, so example code on a
-  docs page stays escaped.
+- `with_post_context()` sets the global `$post` (builder shortcodes read it; a REST
+  request has none) and restores it in a `finally`, along with the rest of the family
+  `setup_postdata()` populates. It also buffers, so a shortcode that prints instead of
+  returning cannot write into the REST response ahead of its JSON body.
+- `clean_rendered_html()` is an allowlist, not a blocklist: `wp_kses()` keeps the tags in
+  `content_html()`, drops presentational attributes and filters `href`/`src` protocols.
+  Required here — the endpoint returns HTML straight to Gendox and nothing downstream
+  strips tags.
+- Around kses: `<script>`/`<style>`/`<noscript>`/`<template>` and comments go first, each
+  reaching to its close tag or the end of the document; a stray `<` is escaped so kses
+  does not read it as a broken tag; `LAYOUT_WRAPPERS` collapse to line breaks after.
+- Text passes run per text node in `normalize_text_nodes()`, which is what keeps a decoded
+  entity from becoming markup and preserves `<pre>` indentation.
 
 Products do **not** render: `prepare_product_rich_text()` still calls `strip_shortcodes()`.
 A catalogue multiplies the per-fetch cost, and product shortcodes mostly emit storefront

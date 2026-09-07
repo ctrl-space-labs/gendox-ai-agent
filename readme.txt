@@ -126,9 +126,11 @@ appreciate hearing how it goes.
 
 = Does it work with page builders and shortcodes? =
 
-Yes. Content is rendered the same way `the_content` renders it on the front end, so
-shortcodes and page-builder elements contribute their real output. To turn rendering off
-and strip shortcodes instead, return false from the `gendox_render_shortcodes` filter.
+Yes. Posts and pages are rendered the same way `the_content` renders them on the front
+end, so shortcodes and page-builder elements contribute their real output. WooCommerce
+product descriptions are the exception — shortcodes there are stripped, not rendered. To
+turn rendering off for posts and pages, return false from the `gendox_render_shortcodes`
+filter.
 
 = Can developers extend it? =
 

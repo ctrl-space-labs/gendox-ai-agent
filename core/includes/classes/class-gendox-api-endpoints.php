@@ -6,6 +6,13 @@ if (!defined('ABSPATH')) exit;
 class Gendox_API_Endpoints
 {
     /**
+     * Layout wrappers: kept through the allowlist only so they can become line breaks.
+     *
+     * @var string[]
+     */
+    const LAYOUT_WRAPPERS = array('div', 'section', 'article', 'header', 'footer', 'aside', 'main', 'figure');
+
+    /**
      * Constructor to register REST API endpoints.
      */
     public function __construct()
@@ -249,10 +256,11 @@ class Gendox_API_Endpoints
     }
 
     /**
-     * Runs a callback with `$target` as the global post.
+     * Runs a callback with `$target` as the global post, capturing anything it prints.
      *
-     * Builder shortcodes read the global post and a REST request has none. Restored in a
-     * `finally` so a shortcode that throws cannot leave the global pointing elsewhere.
+     * Builder shortcodes read the global post and a REST request has none. A shortcode
+     * that prints instead of returning would corrupt the JSON response, so it is
+     * buffered — and kept, since a front-end render would show it too.
      *
      * @param WP_Post  $target
      * @param callable $callback
@@ -261,103 +269,214 @@ class Gendox_API_Endpoints
     private function with_post_context($target, $callback)
     {
         $previous = isset($GLOBALS['post']) ? $GLOBALS['post'] : null;
+        $depth = ob_get_level();
 
         // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restored in finally.
         $GLOBALS['post'] = $target;
         setup_postdata($target);
+        ob_start();
 
         try {
-            return (string) call_user_func($callback);
+            $returned = (string) call_user_func($callback);
+
+            return ob_get_clean() . $returned;
         } finally {
-            if ($previous instanceof WP_Post) {
-                // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring.
-                $GLOBALS['post'] = $previous;
-                setup_postdata($previous);
-            } else {
-                unset($GLOBALS['post']);
+            // A shortcode that threw left our buffer, and any it opened, behind.
+            while (ob_get_level() > $depth) {
+                ob_end_clean();
             }
+
+            $this->restore_post_context($previous);
         }
     }
 
     /**
-     * Drops non-content markup from a rendered document.
+     * Restores every global `setup_postdata()` populates, not just `$post`.
      *
-     * Rendered shortcodes can emit `<script>`/`<style>`, and this endpoint returns HTML
-     * straight to Gendox — nothing downstream strips tags — so they go here.
+     * @param WP_Post|null $previous
+     * @return void
+     */
+    private function restore_post_context($previous)
+    {
+        if ($previous instanceof WP_Post) {
+            // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring.
+            $GLOBALS['post'] = $previous;
+            setup_postdata($previous);
+
+            return;
+        }
+
+        foreach (array('post', 'id', 'authordata', 'currentday', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages') as $global) {
+            unset($GLOBALS[$global]);
+        }
+    }
+
+    /**
+     * Reduces a rendered document to the content Gendox should train on.
+     *
+     * Nothing downstream strips tags, so `wp_kses()` is the only guard: it keeps the
+     * semantic skeleton, drops presentational attributes and filters `href`/`src`
+     * protocols. The passes before it hand it markup it will not misread; the passes
+     * after it touch text only.
      *
      * @param string $html
      * @return string
      */
     private function clean_rendered_html($html)
     {
-        $html = preg_replace('#<(script|style|noscript|template)\b[^>]*>.*?</\1\s*>#is', '', (string) $html);
-        $html = preg_replace('#<!--.*?-->#s', '', $html);
+        $html = $this->drop_non_content_elements((string) $html);
+        $html = wp_kses($this->escape_stray_brackets($html), self::content_html());
 
-        return trim($this->decode_text_entities($this->strip_presentational_markup($html)));
+        // Wrappers become a line break so the text either side does not run together.
+        $html = $this->replace('#</?(?:' . implode('|', self::LAYOUT_WRAPPERS) . ')\s*/?>#i', "\n", $html);
+
+        return trim($this->normalize_text_nodes($html));
     }
 
     /**
-     * Reduces page-builder output to its semantic skeleton.
+     * The tags `clean_rendered_html()` keeps, in `wp_kses()` form.
      *
-     * Builders wrap every element in layout `<div>`s carrying hundreds of CSS custom
-     * properties — on a Fusion page that is roughly three quarters of the payload and
-     * none of it is content. Headings, lists, tables and links survive; presentational
-     * attributes and the wrappers themselves do not.
+     * Deliberately narrow: anything outside the list kses drops, keeping its text.
+     *
+     * @return array<string, array<string, bool>>
+     */
+    private static function content_html()
+    {
+        $with_attributes = array(
+            'a'   => array('href' => true, 'title' => true),
+            'img' => array('src' => true, 'alt' => true, 'title' => true),
+            'td'  => array('colspan' => true, 'rowspan' => true),
+            'th'  => array('colspan' => true, 'rowspan' => true),
+        );
+
+        $bare = array_merge(
+            self::LAYOUT_WRAPPERS,
+            array(
+                'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+                'table', 'caption', 'thead', 'tbody', 'tfoot', 'tr',
+                'blockquote', 'q', 'cite', 'pre', 'code', 'figcaption',
+                'strong', 'em', 'b', 'i', 'del', 'ins', 'mark',
+                'sub', 'sup', 'small', 'abbr', 'time',
+            )
+        );
+
+        // `+` keeps the left-hand entries, so the attribute lists win.
+        return $with_attributes + array_fill_keys($bare, array());
+    }
+
+    /**
+     * Removes elements whose contents are not prose, along with HTML comments.
+     *
+     * Each runs to its closing tag or, unclosed, to the end of the document — the reach
+     * a browser gives it, so what survives is what a visitor would have read.
      *
      * @param string $html
      * @return string
      */
-    private function strip_presentational_markup($html)
+    private function drop_non_content_elements($html)
     {
-        $keep = array('href', 'src', 'alt', 'title', 'colspan', 'rowspan');
+        $html = $this->replace('#<(script|style|noscript|template)\b[^>]*>.*?(?:</\1\s*>|$)#is', '', $html);
 
-        $html = preg_replace_callback(
-            '#<([a-zA-Z][a-zA-Z0-9]*)((?:"[^"]*"|\'[^\']*\'|[^>])*)>#s',
-            function ($tag) use ($keep) {
-                $attributes = '';
-                $pattern = '#([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s"\'>]+)#s';
+        return $this->replace('#<!--.*?(?:-->|$)#s', '', $html);
+    }
 
-                if (preg_match_all($pattern, $tag[2], $found, PREG_SET_ORDER)) {
-                    foreach ($found as $attribute) {
-                        if (in_array(strtolower($attribute[1]), $keep, true)) {
-                            $attributes .= ' ' . strtolower($attribute[1]) . '=' . $attribute[2];
-                        }
-                    }
+    /**
+     * Escapes a `<` that does not open a tag.
+     *
+     * kses reads the `<` in "if x < y" as a malformed tag and drops everything up to the
+     * next `>`. Anything that does look like a tag is left for kses to judge.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function escape_stray_brackets($html)
+    {
+        return $this->replace('#<(?![a-zA-Z/!?])#', '&lt;', $html);
+    }
+
+    /**
+     * Applies the text-only passes — entities, then whitespace — between the tags.
+     *
+     * Splitting keeps a decoded entity from becoming markup, leaves kept attributes
+     * alone, and shows where `<pre>` starts. After kses a `<` outside a tag is always an
+     * entity, so the split is exact.
+     *
+     * @param string $html
+     * @return string
+     */
+    private function normalize_text_nodes($html)
+    {
+        // One capture group, so the pieces alternate text, tag, text, tag…
+        $parts = preg_split('#(<[^>]*>)#', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+        if (!is_array($parts)) {
+            return $html;
+        }
+
+        $preformatted = 0;
+
+        foreach ($parts as $index => $part) {
+            if ($index % 2) {
+                // kses keeps the author's tag-name case.
+                if (preg_match('#^<(/?)pre[\s/>]#i', $part, $tag)) {
+                    $preformatted = '' === $tag[1] ? $preformatted + 1 : max(0, $preformatted - 1);
                 }
 
-                return '<' . strtolower($tag[1]) . $attributes . '>';
-            },
-            $html
-        );
+                continue;
+            }
 
-        // Wrappers carry nothing once their attributes are gone. Blocks become a line
-        // break so text does not run together; inline spans simply disappear.
-        $html = preg_replace('#</?div>#', "\n", $html);
-        $html = preg_replace('#</?span>#', '', $html);
+            $text = $this->decode_text_entities($part);
+            $parts[$index] = $preformatted > 0 ? $text : $this->collapse_whitespace($text);
+        }
 
-        $html = preg_replace('#[ \t]+#', ' ', $html);
-
-        return preg_replace('#\n\s*\n\s*\n+#', "\n\n", $html);
+        return implode('', $parts);
     }
 
     /**
      * Decodes entities so the corpus reads "agents & chatbots", not "agents &#038; chatbots".
      *
-     * Angle brackets are parked around the decode: a page showing `&lt;script&gt;` as
-     * example code must keep it escaped rather than gain a live tag.
+     * Text nodes only, so any angle bracket left after decoding came from an entity and
+     * goes straight back — example code stays example code. A bare `&` opens nothing.
      *
-     * @param string $html
+     * @param string $text
      * @return string
      */
-    private function decode_text_entities($html)
+    private function decode_text_entities($text)
     {
-        $html = preg_replace('/&(?:lt|#0*60|#[xX]0*3[cC]);/', "\0LT\0", (string) $html);
-        $html = preg_replace('/&(?:gt|#0*62|#[xX]0*3[eE]);/', "\0GT\0", $html);
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        $text = str_replace("\xc2\xa0", ' ', $text); // Non-breaking spaces.
 
-        $html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
-        $html = str_replace("\xc2\xa0", ' ', $html); // Non-breaking spaces.
+        return str_replace(array('<', '>'), array('&lt;', '&gt;'), $text);
+    }
 
-        return str_replace(array("\0LT\0", "\0GT\0"), array('&lt;', '&gt;'), $html);
+    /**
+     * Collapses runs of spaces and blank lines. Never reaches a `<pre>`.
+     *
+     * @param string $text
+     * @return string
+     */
+    private function collapse_whitespace($text)
+    {
+        return $this->replace('#\n\s*\n\s*\n+#', "\n\n", $this->replace('#[ \t]+#', ' ', $text));
+    }
+
+    /**
+     * `preg_replace()` that keeps the subject when PCRE gives up.
+     *
+     * A large enough page can exhaust the backtrack limit, and a null return would
+     * quietly become an empty document. Losing one formatting pass is the better failure.
+     *
+     * @param string $pattern
+     * @param string $replacement
+     * @param string $subject
+     * @return string
+     */
+    private function replace($pattern, $replacement, $subject)
+    {
+        $result = preg_replace($pattern, $replacement, $subject);
+
+        return null === $result ? $subject : $result;
     }
 
     /**
@@ -522,8 +641,8 @@ class Gendox_API_Endpoints
     /**
      * Description / short description: strip shortcodes, keep HTML structure.
      *
-     * Products deliberately do not render, unlike posts and pages. A catalogue can be
-     * large, so the per-fetch cost of running shortcode callbacks multiplies
+     * Products deliberately do not render: a catalogue multiplies the per-fetch cost, and
+     * product shortcodes mostly emit storefront chrome.
      *
      * @param string $html
      * @return string
