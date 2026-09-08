@@ -76,27 +76,6 @@ integration. Registered as a **static** callback: `get_organization_id()` constr
 settings class, and WordPress keys instance callbacks by object hash, so an instance
 callback registers a duplicate handler on every call and the save logic runs twice.
 
-**`/profile` responses are cached by CloudFront across callers — API key validation cannot
-be trusted until that is fixed.** The origin authenticates correctly (an unauthenticated
-request that reaches it returns HTTP 500 `Full authentication is required`), but the
-CloudFront distribution in front of `app.gendox.dev` caches the response with a cache key
-that does **not** include `x-api-key`, and ignores the origin's
-`no-cache, no-store, must-revalidate`. Once any successful `/profile` response is cached,
-every later caller gets it — verified with no API key at all returning HTTP 200, a real
-profile and `x-cache: RefreshHit`, `age: 40`.
-
-Consequences for this plugin, until the cache policy is corrected:
-
-- `Gendox_AI_Agent_Helpers::get_organization_id()` may return an organization the
-  supplied key does not own, so the `gendox_api_key_invalid` branch in
-  `gendox_handle_api_key_change()` is unreachable and the organization comparison can be
-  wrong.
-- Nothing client-side fixes it: a cache-busting query string, a `Cache-Control: no-cache`
-  request header and dropping `Accept-Encoding` were all tried and all still hit the cache.
-
-The fix belongs in the CloudFront cache policy — do not cache `/gendox/api/v1/*`, or include
-the auth header in the cache key.
-
 **Uninstall.** `uninstall.php` (not `register_uninstall_hook`) drops the table, removes this
 plugin's options, and sends `INACTIVE` to the backend. It must keep an **explicit** option
 list — sibling plugins on the same sites share the `gendox_` prefix
