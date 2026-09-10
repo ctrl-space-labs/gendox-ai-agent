@@ -359,6 +359,10 @@ properties to keep future tweaks in one place.
 
 #assignChatModal {
     width: 300px;
+    /* A site with many taxonomies makes this taller than the viewport, and a fixed,
+       centred box has no way to scroll - the top and bottom end up off screen. */
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
 #assignChatModal h2 {
