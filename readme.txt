@@ -5,7 +5,7 @@ Tags: ai, chatbot, ai agent, ai assistant, customer support
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,11 @@ extra page context with each message. See the
 4. The AI chat widget on the front end
 
 == Changelog ==
+
+= 1.1.2: October 16, 2026 =
+* Fix View failing with "Error fetching project details" for projects whose content had never been assigned
+* View errors now explain what went wrong, such as an expired session or a project removed by a sync
+* Remove the project Delete button, which did nothing; Fetch Projects already removes projects deleted in Gendox
 
 = 1.1.1: September 8, 2026 =
 * Fix the Assign Chat dialog overflowing the screen on sites with many taxonomies; it now fits the window and scrolls

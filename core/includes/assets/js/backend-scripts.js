@@ -86,7 +86,6 @@ jQuery(document).ready(function ($) {
                             '<a href="#" class="btn btn-sm btn-warning edit-project" title="Choose which posts, pages, and products this project can train on."><i class="fas fa-pencil-alt"></i> Assign Content</a> ' +
                             '<a href="#" class="btn btn-sm btn-success assign-chat" data-project-id="' + project.gendox_id + '" title="Choose which post types and taxonomies show this project\'s chat widget."><i class="fas fa-eye"></i> Assign Chat</a> ' +
                             '<a href="#" class="btn btn-sm btn-info view-project" title="See this project\'s details and currently assigned content."><i class="fas fa-eye"></i> View</a> ' +
-                            '<a href="#" class="btn btn-sm btn-danger delete-project" title="Remove this project from the WordPress list. Does not delete it in Gendox."><i class="fas fa-trash"></i> Delete</a> ' +
                             '</td>';
                         projectRows += '</tr>';
                     });
@@ -302,11 +301,17 @@ jQuery(document).ready(function ($) {
                     // Show the modal
                     $('#viewProjectModal').show();
                 } else {
-                    alert('Project details could not be loaded.');
+                    alert('Project details could not be loaded: ' + (response.data || 'unknown error.'));
                 }
             },
-            error: function () {
-                alert('Error fetching project details.');
+            error: function (xhr) {
+                // check_ajax_referer() answers a stale nonce with 403 and a body of "-1".
+                if (xhr.status === 403 && $.trim(xhr.responseText) === '-1') {
+                    alert('Your session has expired. Reload the page and try again.');
+                } else {
+                    alert('Error fetching project details (HTTP ' + xhr.status + (xhr.statusText ? ' ' + xhr.statusText : '') + '). '
+                        + 'The request failed - check the PHP error log for details.');
+                }
             }
         });
     });

@@ -780,7 +780,6 @@ class Gendox_AI_Agent_Settings
 									<a href="#" class="btn btn-sm btn-warning edit-project" title="<?php echo esc_attr__('Choose which posts, pages, and products this project can train on.', 'gendox-ai-agent'); ?>"><i class="fas fa-pencil-alt"></i> Assign Content</a>
 									<a href="#" class="btn btn-sm btn-success assign-chat" data-project-id="<?php echo esc_attr($project->gendoxId); ?>" title="<?php echo esc_attr__('Choose which post types and taxonomies show this project\'s chat widget.', 'gendox-ai-agent'); ?>"><i class="fas fa-eye"></i> Assign Chat</a>
 									<a href="#" class="btn btn-sm btn-info view-project" title="<?php echo esc_attr__('See this project\'s details and currently assigned content.', 'gendox-ai-agent'); ?>"><i class="fas fa-eye"></i> View</a>
-									<a href="#" class="btn btn-sm btn-danger delete-project" title="<?php echo esc_attr__('Remove this project from the WordPress list. Does not delete it in Gendox.', 'gendox-ai-agent'); ?>"><i class="fas fa-trash"></i> Delete</a>
 								</td>
 							</tr>
 						<?php endforeach; ?>
@@ -1297,12 +1296,17 @@ class Gendox_AI_Agent_Settings
 		$project = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE gendoxId = %s", $projectId));
 
 		if ($project) {
+			// postIds is '' for a project synced from Gendox whose content was never saved,
+			// and indexing '' with a string key is a fatal TypeError on PHP 8.
 			$assignedItems = maybe_unserialize($project->postIds);
+			if (!is_array($assignedItems)) {
+				$assignedItems = array();
+			}
 
 			// Fetch names of assigned posts, products, and pages
-			$post_titles = $this->get_titles_by_ids($assignedItems['posts'], 'post');
-			$product_titles = $this->get_titles_by_ids($assignedItems['products'], 'product');
-			$page_titles = $this->get_titles_by_ids($assignedItems['pages'], 'page');
+			$post_titles = $this->get_titles_by_ids($assignedItems['posts'] ?? array(), 'post');
+			$product_titles = $this->get_titles_by_ids($assignedItems['products'] ?? array(), 'product');
+			$page_titles = $this->get_titles_by_ids($assignedItems['pages'] ?? array(), 'page');
 
 			// Return detailed project data
 			wp_send_json_success(array(
@@ -1313,7 +1317,7 @@ class Gendox_AI_Agent_Settings
 				'pages' => $page_titles,
 			));
 		} else {
-			wp_send_json_error('No project found.');
+			wp_send_json_error(__('Project not found. It may have been removed by a project sync - reload the page to refresh the list.', 'gendox-ai-agent'));
 		}
 	}
 

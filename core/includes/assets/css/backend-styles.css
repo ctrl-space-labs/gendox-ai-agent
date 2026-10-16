@@ -266,12 +266,6 @@ properties to keep future tweaks in one place.
     color: #fff;
 }
 
-.toplevel_page_gendox-ai-chat-settings .btn-danger {
-    background-color: var(--gendox-danger);
-    border-color: var(--gendox-danger);
-    color: #fff;
-}
-
 .toplevel_page_gendox-ai-chat-settings .btn {
     border-radius: 6px;
 }
