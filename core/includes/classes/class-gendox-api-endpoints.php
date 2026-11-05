@@ -114,6 +114,9 @@ class Gendox_API_Endpoints
 
         if ($project) {
             $assigned_items = maybe_unserialize($project->postIds);
+            if (!is_array($assigned_items)) {
+                $assigned_items = array();
+            }
             $formatted_items = array();
 
             // Loop through each type (posts, products, pages)
