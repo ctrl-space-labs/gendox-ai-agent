@@ -3,9 +3,9 @@ Contributors: csekas
 Donate link:
 Tags: ai, chatbot, ai agent, ai assistant, customer support
 Requires at least: 5.8
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,10 @@ extra page context with each message. See the
 4. The AI chat widget on the front end
 
 == Changelog ==
+
+= 1.1.3: November 26, 2026 =
+* Tested with WordPress 7.2 RC3
+* Fix a PHP warning in the assigned content API for projects with no assigned content
 
 = 1.1.2: October 16, 2026 =
 * Fix View failing with "Error fetching project details" for projects whose content had never been assigned
